@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, AuthError, getPlayers } from "../api/api";
 import { usePlayer } from "../lib/player";
 import type { PlayersResponse } from "../api/types";
+import { useCardMaster } from "../cards/useCardMaster";
+import ApiErrorPanel from "../components/ApiErrorPanel";
 
 function ErrorBox({ title, detail }: { title: string; detail: string }) {
   return (
@@ -20,6 +22,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PlayersResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const { refresh: refreshCards, loading: cardsLoading, error: cardsError } = useCardMaster();
 
   useEffect(() => {
     void (async () => {
@@ -99,6 +103,20 @@ export default function SettingsPage() {
         <div className="mt-1 text-xs text-neutral-400">
           In prod/dev: show status + bodyText for API errors.
         </div>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            disabled={cardsLoading}
+            onClick={() => void refreshCards()}
+            className="rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm hover:bg-neutral-900 disabled:opacity-60"
+          >
+            {cardsLoading ? "Refreshing..." : "Refresh cards (nocache=1)"}
+          </button>
+        </div>
+        {cardsError ? (
+          <div className="mt-3">
+            <ApiErrorPanel title="Cards refresh error" detail={cardsError} />
+          </div>
+        ) : null}
       </div>
     </section>
   );

@@ -98,15 +98,15 @@ export function getOpponentTrendSince(playerTag: string, since: string): Promise
   return request<OpponentTrendResponse>("/api/stats/opponent-trend", { params: { player_tag: playerTag, since } });
 }
 
-export function getMatchupByCard(params: { myDeckKey: string; last: number; min: number }): Promise<MatchupByCardResponse> {
+export function getMatchupByCard(playerTag: string, myDeckKey: string, last: number): Promise<MatchupByCardResponse> {
   return request<MatchupByCardResponse>("/api/stats/matchup-by-card", {
-    params: { my_deck_key: params.myDeckKey, last: params.last, min: params.min },
+    params: { player_tag: playerTag, my_deck_key: myDeckKey, last },
   });
 }
 
-export function getPriority(params: { playerTag: string; myDeckKey: string; last: number; min: number }): Promise<PriorityResponse> {
+export function getPriority(playerTag: string, myDeckKey: string, last: number): Promise<PriorityResponse> {
   return request<PriorityResponse>("/api/stats/priority", {
-    params: { player_tag: params.playerTag, my_deck_key: params.myDeckKey, last: params.last, min: params.min },
+    params: { player_tag: playerTag, my_deck_key: myDeckKey, last },
   });
 }
 

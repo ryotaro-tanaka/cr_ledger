@@ -47,7 +47,7 @@ export type OpponentTrendResponse = ApiBaseOk & {
 
 export type MatchupByCardResponse = ApiBaseOk & {
   my_deck_key: string;
-  filter: { last: number; min: number };
+  filter: { last: number; player_tag: string };
   total_battles: number;
   cards: Array<{
     card_id: number;
@@ -61,17 +61,18 @@ export type MatchupByCardResponse = ApiBaseOk & {
 
 export type PriorityResponse = ApiBaseOk & {
   my_deck_key: string;
-  filter: { player_tag: string; last: number; min: number };
+  filter: { player_tag: string; last: number };
   total_battles: number;
   cards: Array<{
     card_id: number;
     slot_kind: SlotKind;
-    battles_with_card: number;
+    deck_battles_with_card: number;
     usage_rate: number; // 0-1
     win_rate: number; // 0-1
     priority_score: number;
   }>;
 };
+
 
 export type RoyaleApiCardsResponse = {
   items: Array<{
