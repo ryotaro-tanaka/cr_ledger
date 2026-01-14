@@ -1,0 +1,423 @@
+/**
+ * D1操作をまとめる層。
+ */
+
+/** ---------- writes ---------- */
+
+/**
+ * players: 自分だけ upsert（opponentは不要）
+ */
+export async function upsertMePlayer(env, playerTagDb, playerName) {
+  await env.DB.prepare(`
+    INSERT INTO players (player_tag, player_name)
+    VALUES (?, ?)
+    ON CONFLICT(player_tag) DO UPDATE SET
+      player_name = excluded.player_name
+  `).bind(playerTagDb, playerName || null).run();
+}
+
+/**
+ * my_decks: 存在しないときだけ INSERT（deck_name更新禁止）
+ */
+export async function insertDeckIfNotExists(env, myDeckKey, playerTagDb) {
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO my_decks (my_deck_key, player_tag, deck_name)
+    VALUES (?, ?, NULL)
+  `).bind(myDeckKey, playerTagDb).run();
+}
+
+/**
+ * my_deck_cards:
+ * - cards(8枚) は取得順で slot 0..7
+ * - support は slot 8（必須想定）
+ */
+export async function upsertMyDeckCardsAsFetched(env, myDeckKey, myCards, mySupportCard, cardSlotKindFromBattlelog) {
+  const stmt = env.DB.prepare(`
+    INSERT OR REPLACE INTO my_deck_cards (my_deck_key, slot, card_id, slot_kind)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const batch = [];
+
+  for (let i = 0; i < 8; i++) {
+    const c = myCards?.[i];
+    if (!c || !Number.isInteger(c.id)) continue;
+    batch.push(stmt.bind(myDeckKey, i, c.id, cardSlotKindFromBattlelog(c)));
+  }
+
+  if (mySupportCard && Number.isInteger(mySupportCard.id)) {
+    batch.push(stmt.bind(myDeckKey, 8, mySupportCard.id, "support"));
+  }
+
+  if (batch.length) await env.DB.batch(batch);
+}
+
+/**
+ * battles: battle_id 主キーで冪等保存
+ */
+export async function upsertBattle(env, battleId, playerTagDb, battleTime, result, myDeckKey, arenaId, gameModeId) {
+  await env.DB.prepare(`
+    INSERT INTO battles (
+      battle_id, player_tag, battle_time, result, my_deck_key,
+      arena_id, game_mode_id
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(battle_id) DO UPDATE SET
+      result = excluded.result,
+      my_deck_key = excluded.my_deck_key,
+      arena_id = excluded.arena_id,
+      game_mode_id = excluded.game_mode_id
+  `).bind(
+    battleId, playerTagDb, battleTime, result, myDeckKey, arenaId, gameModeId
+  ).run();
+}
+
+
+/**
+ * battle_opponent_cards:
+ * - 取得順で slot 0..7
+ * - support は slot 8
+ */
+export async function upsertOpponentCardsAsFetched(env, battleId, opCards, opSupportCard, cardSlotKindFromBattlelog) {
+  const stmt = env.DB.prepare(`
+    INSERT OR REPLACE INTO battle_opponent_cards (battle_id, slot, card_id, slot_kind)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const batch = [];
+
+  for (let i = 0; i < 8; i++) {
+    const c = opCards?.[i];
+    if (!c || !Number.isInteger(c.id)) continue;
+    batch.push(stmt.bind(battleId, i, c.id, cardSlotKindFromBattlelog(c)));
+  }
+
+  if (opSupportCard && Number.isInteger(opSupportCard.id)) {
+    batch.push(stmt.bind(battleId, 8, opSupportCard.id, "support"));
+  }
+
+  if (batch.length) await env.DB.batch(batch);
+}
+
+/** ---------- existence ---------- */
+
+export async function battleExists(env, battleId) {
+  const r = await env.DB.prepare(
+    `SELECT 1 AS one FROM battles WHERE battle_id = ? LIMIT 1`
+  ).bind(battleId).all();
+
+  return (r.results?.length || 0) > 0;
+}
+
+/** ---------- stats helpers ---------- */
+
+async function oneNumber(env, sql, binds = []) {
+  const r = await env.DB.prepare(sql).bind(...binds).all();
+  const row = r.results?.[0];
+  if (!row) return 0;
+  const v = Object.values(row)[0];
+  return Number.isFinite(v) ? v : 0;
+}
+
+/** ---------- stats: opponent trend (filtered by player_tag) ---------- */
+
+/**
+ * 直近 last 件（win/lossのみ）における相手カード使用率（player_tagで絞る）
+ */
+export async function statsOpponentTrendLast(env, playerTagDb, last) {
+  const total = await oneNumber(
+    env,
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    )
+    SELECT COUNT(*) AS total_battles FROM recent;
+    `,
+    [playerTagDb, last]
+  );
+
+  if (total === 0) return { total_battles: 0, cards: [] };
+
+  const r = await env.DB.prepare(
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    ),
+    total AS (SELECT COUNT(*) AS total_battles FROM recent)
+    SELECT
+      boc.card_id,
+      boc.slot_kind,
+      COUNT(DISTINCT boc.battle_id) AS battles,
+      (COUNT(DISTINCT boc.battle_id) * 1.0) / (SELECT total_battles FROM total) AS usage_rate
+    FROM battle_opponent_cards boc
+    JOIN recent r ON r.battle_id = boc.battle_id
+    GROUP BY boc.card_id, boc.slot_kind
+    ORDER BY battles DESC;
+    `
+  ).bind(playerTagDb, last).all();
+
+  return { total_battles: total, cards: r.results };
+}
+
+/**
+ * battle_time >= since（win/lossのみ）における相手カード使用率（player_tagで絞る）
+ */
+export async function statsOpponentTrendSince(env, playerTagDb, since) {
+  const total = await oneNumber(
+    env,
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss') AND battle_time >= ?
+    )
+    SELECT COUNT(*) AS total_battles FROM recent;
+    `,
+    [playerTagDb, since]
+  );
+
+  if (total === 0) return { total_battles: 0, cards: [] };
+
+  const r = await env.DB.prepare(
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss') AND battle_time >= ?
+    ),
+    total AS (SELECT COUNT(*) AS total_battles FROM recent)
+    SELECT
+      boc.card_id,
+      boc.slot_kind,
+      COUNT(DISTINCT boc.battle_id) AS battles,
+      (COUNT(DISTINCT boc.battle_id) * 1.0) / (SELECT total_battles FROM total) AS usage_rate
+    FROM battle_opponent_cards boc
+    JOIN recent r ON r.battle_id = boc.battle_id
+    GROUP BY boc.card_id, boc.slot_kind
+    ORDER BY battles DESC;
+    `
+  ).bind(playerTagDb, since).all();
+
+  return { total_battles: total, cards: r.results };
+}
+
+/** ---------- stats: matchup by card (for a deck) ---------- */
+
+export async function statsMatchupByCardLast(env, myDeckKey, last, minBattles) {
+  const total = await oneNumber(
+    env,
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE my_deck_key = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    )
+    SELECT COUNT(*) AS total_battles FROM recent;
+    `,
+    [myDeckKey, last]
+  );
+
+  if (total === 0) return { total_battles: 0, cards: [] };
+
+  const r = await env.DB.prepare(
+    `
+    WITH recent AS (
+      SELECT battle_id, result
+      FROM battles
+      WHERE my_deck_key = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    )
+    SELECT
+      boc.card_id,
+      boc.slot_kind,
+      COUNT(DISTINCT boc.battle_id) AS battles,
+      SUM(CASE WHEN r.result = 'win'  THEN 1 ELSE 0 END) AS wins,
+      SUM(CASE WHEN r.result = 'loss' THEN 1 ELSE 0 END) AS losses,
+      (SUM(CASE WHEN r.result = 'win' THEN 1 ELSE 0 END) * 1.0) / COUNT(DISTINCT boc.battle_id) AS win_rate
+    FROM battle_opponent_cards boc
+    JOIN recent r ON r.battle_id = boc.battle_id
+    GROUP BY boc.card_id, boc.slot_kind
+    HAVING battles >= ?
+    ORDER BY win_rate ASC, battles DESC;
+    `
+  ).bind(myDeckKey, last, minBattles).all();
+
+  return { total_battles: total, cards: r.results };
+}
+
+/** ---------- stats: priority (trend(player) × weakness(deck)) ---------- */
+/**
+ * 目的:
+ * - trend: 「特定のプレイヤー」が最近よく当たるカード（usage_rate）
+ * - weakness: 「特定のデッキ」がそのカード相手に勝てているか（win_rate）
+ *
+ * 出力:
+ * - trend側に存在するカードをベースに返す（よく当たるカード一覧）
+ * - weaknessデータが十分(min)ある場合のみ priority_score を計算
+ *
+ * priority_score = usage_rate * (1 - win_rate)
+ */
+export async function statsPriorityLast(env, playerTagDb, myDeckKey, last, minBattles) {
+  // trend集合の母数
+  const totalTrend = await oneNumber(
+    env,
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    )
+    SELECT COUNT(*) AS total_battles FROM recent;
+    `,
+    [playerTagDb, last]
+  );
+
+  if (totalTrend === 0) return { total_battles: 0, cards: [] };
+
+  const r = await env.DB.prepare(
+    `
+    WITH
+    -- trend: player の最近試合（母集団）
+    trend_recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    ),
+    trend_total AS (
+      SELECT COUNT(*) AS total_battles FROM trend_recent
+    ),
+    trend_per_card AS (
+      SELECT
+        boc.card_id,
+        boc.slot_kind,
+        COUNT(DISTINCT boc.battle_id) AS battles_with_card,
+        (COUNT(DISTINCT boc.battle_id) * 1.0) / (SELECT total_battles FROM trend_total) AS usage_rate
+      FROM battle_opponent_cards boc
+      JOIN trend_recent t ON t.battle_id = boc.battle_id
+      GROUP BY boc.card_id, boc.slot_kind
+    ),
+
+    -- weakness: deck の最近試合（win_rate母集団）
+    deck_recent AS (
+      SELECT battle_id, result
+      FROM battles
+      WHERE my_deck_key = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    ),
+    deck_per_card AS (
+      SELECT
+        boc.card_id,
+        boc.slot_kind,
+        COUNT(DISTINCT boc.battle_id) AS deck_battles_with_card,
+        SUM(CASE WHEN d.result = 'win' THEN 1 ELSE 0 END) AS deck_wins
+      FROM battle_opponent_cards boc
+      JOIN deck_recent d ON d.battle_id = boc.battle_id
+      GROUP BY boc.card_id, boc.slot_kind
+    )
+
+    SELECT
+      t.card_id,
+      t.slot_kind,
+      t.battles_with_card,
+      t.usage_rate,
+
+      -- weakness（十分なサンプルがある時だけ）
+      dp.deck_battles_with_card,
+      CASE
+        WHEN dp.deck_battles_with_card >= ? THEN (dp.deck_wins * 1.0) / dp.deck_battles_with_card
+        ELSE NULL
+      END AS win_rate,
+
+      CASE
+        WHEN dp.deck_battles_with_card >= ?
+          THEN t.usage_rate * (1.0 - (dp.deck_wins * 1.0) / dp.deck_battles_with_card)
+        ELSE NULL
+      END AS priority_score
+
+    FROM trend_per_card t
+    LEFT JOIN deck_per_card dp
+      ON dp.card_id = t.card_id AND dp.slot_kind = t.slot_kind
+
+    ORDER BY
+      (priority_score IS NULL) ASC,   -- NULLは後ろ
+      priority_score DESC,
+      t.usage_rate DESC,
+      t.battles_with_card DESC;
+    `
+  ).bind(playerTagDb, last, myDeckKey, last, minBattles, minBattles).all();
+
+  return { total_battles: totalTrend, cards: r.results };
+}
+
+/** ---------- stats: my decks list (filtered by player_tag) ---------- */
+
+export async function statsMyDecksLast(env, playerTagDb, last) {
+  const total = await oneNumber(
+    env,
+    `
+    WITH recent AS (
+      SELECT battle_id
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    )
+    SELECT COUNT(*) AS total_battles FROM recent;
+    `,
+    [playerTagDb, last]
+  );
+
+  if (total === 0) return { total_battles: 0, decks: [] };
+
+  const r = await env.DB.prepare(
+    `
+    WITH recent AS (
+      SELECT my_deck_key
+      FROM battles
+      WHERE player_tag = ? AND result IN ('win','loss')
+      ORDER BY battle_time DESC
+      LIMIT ?
+    )
+    SELECT
+      r.my_deck_key,
+      d.deck_name,
+      COUNT(*) AS battles
+    FROM recent r
+    LEFT JOIN my_decks d ON d.my_deck_key = r.my_deck_key
+    GROUP BY r.my_deck_key, d.deck_name
+    ORDER BY battles DESC;
+    `
+  ).bind(playerTagDb, last).all();
+
+  return { total_battles: total, decks: r.results };
+}
+
+export async function listPlayers(env, firstPlayerTagDb = "GYVCJJCR0") {
+  const r = await env.DB.prepare(
+    `
+    SELECT player_tag, player_name
+    FROM players
+    ORDER BY
+      CASE WHEN player_tag = ? THEN 0 ELSE 1 END,
+      player_tag ASC;
+    `
+  ).bind(firstPlayerTagDb).all();
+
+  return { players: r.results || [] };
+}
