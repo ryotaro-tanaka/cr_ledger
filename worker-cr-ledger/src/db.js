@@ -210,8 +210,7 @@ export async function statsOpponentTrendSince(env, playerTagDb, since) {
 }
 
 /** ---------- stats: matchup by card (for a deck) ---------- */
-
-export async function statsMatchupByCardLast(env, myDeckKey, last, minBattles) {
+export async function statsMatchupByCardLast(env, myDeckKey, last) {
   const total = await oneNumber(
     env,
     `
@@ -237,21 +236,32 @@ export async function statsMatchupByCardLast(env, myDeckKey, last, minBattles) {
       WHERE my_deck_key = ? AND result IN ('win','loss')
       ORDER BY battle_time DESC
       LIMIT ?
+    ),
+    per_card AS (
+      SELECT
+        boc.card_id,
+        boc.slot_kind,
+        COUNT(DISTINCT boc.battle_id) AS battles,
+        SUM(CASE WHEN r.result = 'win'  THEN 1 ELSE 0 END) AS wins,
+        SUM(CASE WHEN r.result = 'loss' THEN 1 ELSE 0 END) AS losses
+      FROM battle_opponent_cards boc
+      JOIN recent r ON r.battle_id = boc.battle_id
+      GROUP BY boc.card_id, boc.slot_kind
     )
     SELECT
-      boc.card_id,
-      boc.slot_kind,
-      COUNT(DISTINCT boc.battle_id) AS battles,
-      SUM(CASE WHEN r.result = 'win'  THEN 1 ELSE 0 END) AS wins,
-      SUM(CASE WHEN r.result = 'loss' THEN 1 ELSE 0 END) AS losses,
-      (SUM(CASE WHEN r.result = 'win' THEN 1 ELSE 0 END) * 1.0) / COUNT(DISTINCT boc.battle_id) AS win_rate
-    FROM battle_opponent_cards boc
-    JOIN recent r ON r.battle_id = boc.battle_id
-    GROUP BY boc.card_id, boc.slot_kind
-    HAVING battles >= ?
+      card_id,
+      slot_kind,
+      battles,
+      wins,
+      losses,
+      CASE
+        WHEN battles > 0 THEN (wins * 1.0) / battles
+        ELSE 0
+      END AS win_rate
+    FROM per_card
     ORDER BY win_rate ASC, battles DESC;
     `
-  ).bind(myDeckKey, last, minBattles).all();
+  ).bind(myDeckKey, last).all();
 
   return { total_battles: total, cards: r.results };
 }
@@ -268,8 +278,7 @@ export async function statsMatchupByCardLast(env, myDeckKey, last, minBattles) {
  *
  * priority_score = usage_rate * (1 - win_rate)
  */
-export async function statsPriorityLast(env, playerTagDb, myDeckKey, last, minBattles) {
-  // trend集合の母数
+export async function statsPriorityLast(env, playerTagDb, myDeckKey, last) {
   const totalTrend = await oneNumber(
     env,
     `
@@ -290,7 +299,7 @@ export async function statsPriorityLast(env, playerTagDb, myDeckKey, last, minBa
   const r = await env.DB.prepare(
     `
     WITH
-    -- trend: player の最近試合（母集団）
+    -- trend: player の最近試合
     trend_recent AS (
       SELECT battle_id
       FROM battles
@@ -312,7 +321,7 @@ export async function statsPriorityLast(env, playerTagDb, myDeckKey, last, minBa
       GROUP BY boc.card_id, boc.slot_kind
     ),
 
-    -- weakness: deck の最近試合（win_rate母集団）
+    -- weakness: deck の最近試合（このデッキでの勝率）
     deck_recent AS (
       SELECT battle_id, result
       FROM battles
@@ -337,17 +346,18 @@ export async function statsPriorityLast(env, playerTagDb, myDeckKey, last, minBa
       t.battles_with_card,
       t.usage_rate,
 
-      -- weakness（十分なサンプルがある時だけ）
-      dp.deck_battles_with_card,
+      COALESCE(dp.deck_battles_with_card, 0) AS deck_battles_with_card,
+
       CASE
-        WHEN dp.deck_battles_with_card >= ? THEN (dp.deck_wins * 1.0) / dp.deck_battles_with_card
-        ELSE NULL
+        WHEN COALESCE(dp.deck_battles_with_card, 0) > 0
+          THEN (COALESCE(dp.deck_wins, 0) * 1.0) / dp.deck_battles_with_card
+        ELSE 0
       END AS win_rate,
 
       CASE
-        WHEN dp.deck_battles_with_card >= ?
-          THEN t.usage_rate * (1.0 - (dp.deck_wins * 1.0) / dp.deck_battles_with_card)
-        ELSE NULL
+        WHEN COALESCE(dp.deck_battles_with_card, 0) > 0
+          THEN t.usage_rate * (1.0 - ((COALESCE(dp.deck_wins, 0) * 1.0) / dp.deck_battles_with_card))
+        ELSE 0
       END AS priority_score
 
     FROM trend_per_card t
@@ -355,15 +365,15 @@ export async function statsPriorityLast(env, playerTagDb, myDeckKey, last, minBa
       ON dp.card_id = t.card_id AND dp.slot_kind = t.slot_kind
 
     ORDER BY
-      (priority_score IS NULL) ASC,   -- NULLは後ろ
       priority_score DESC,
       t.usage_rate DESC,
       t.battles_with_card DESC;
     `
-  ).bind(playerTagDb, last, myDeckKey, last, minBattles, minBattles).all();
+  ).bind(playerTagDb, last, myDeckKey, last).all();
 
-  return { total_battles: totalTrend, cards: r.results };
+  return { total_battles: totalTrend, cards: r.results || [] };
 }
+
 
 /** ---------- stats: my decks list (filtered by player_tag) ---------- */
 

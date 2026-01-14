@@ -200,24 +200,22 @@ async function handleMatchupByCard(env, url) {
   if (!myDeckKey) return json({ ok: false, error: "my_deck_key required" }, 400);
 
   const last = clampInt(url.searchParams.get("last"), 1, 5000, 500);
-  const min = clampInt(url.searchParams.get("min"), 1, 1000, 1);
 
-  const out = await statsMatchupByCardLast(env, myDeckKey, last, min);
-  return json({ ok: true, my_deck_key: myDeckKey, filter: { last, min }, ...out });
+  const out = await statsMatchupByCardLast(env, myDeckKey, last);
+  return json({ ok: true, my_deck_key: myDeckKey, filter: { last }, ...out });
 }
 
 async function handlePriority(env, url) {
-  // ★ trend は player_tag、weakness は my_deck_key
+  // trend は player_tag、weakness は my_deck_key に基づく
   const playerTagDb = requirePlayerTagDb(url);
 
   const myDeckKey = url.searchParams.get("my_deck_key");
   if (!myDeckKey) return json({ ok: false, error: "my_deck_key required" }, 400);
 
   const last = clampInt(url.searchParams.get("last"), 1, 5000, 500);
-  const min = clampInt(url.searchParams.get("min"), 1, 1000, 1);
 
-  const out = await statsPriorityLast(env, playerTagDb, myDeckKey, last, min);
-  return json({ ok: true, player_tag: playerTagDb, my_deck_key: myDeckKey, filter: { last, min }, ...out });
+  const out = await statsPriorityLast(env, playerTagDb, myDeckKey, last);
+  return json({ ok: true, player_tag: playerTagDb, my_deck_key: myDeckKey, filter: { last }, ...out });
 }
 
 async function handleMyDecks(env, url) {
