@@ -123,7 +123,6 @@ async function syncCore(env, tagApi) {
     const type = normalizeType(entry?.type);
     const battleId = makeBattleId({ myTagDb, opTagDb, battleTime, type });
 
-    // ★既に入っている＝以降はより古いはず → 打ち切り
     if (await battleExists(env, battleId)) {
       counts.stopped_early = 1;
       results.push({ status: "skipped", reason: "already exists -> stop sync", battle_id: battleId });
