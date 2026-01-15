@@ -442,3 +442,19 @@ export async function updateDeckName(env, myDeckKey, deckNameOrNull) {
   const changes = r?.meta?.changes ?? r?.changes ?? 0;
   return { changes };
 }
+
+export async function getMyDeckCards(env, myDeckKey) {
+  const r = await env.DB.prepare(
+    `
+    SELECT
+      slot,
+      card_id,
+      slot_kind
+    FROM my_deck_cards
+    WHERE my_deck_key = ?
+    ORDER BY slot ASC;
+    `
+  ).bind(myDeckKey).all();
+
+  return { cards: r.results || [] };
+}

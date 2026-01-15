@@ -23,7 +23,8 @@ import {
   statsPriorityLast,
   statsMyDecksLast,
   listPlayers,
-	updateDeckName
+	updateDeckName,
+	getMyDeckCards
 } from "./db.js";
 
 import { json, clampInt, route, handleFetch, readJson } from "./http.js";
@@ -158,6 +159,7 @@ async function handleRoot() {
       "Try:",
       "POST  /api/sync?player_tag=GYVCJJCR0",
       "GET   /api/players",
+      "GET   /api/my-deck-cards?my_deck_key=...",
       "GET   /api/stats/opponent-trend?player_tag=GYVCJJCR0&last=200",
       "GET   /api/stats/opponent-trend?player_tag=GYVCJJCR0&since=20260101T000000.000Z",
       "GET   /api/stats/my-decks?player_tag=GYVCJJCR0&last=200",
@@ -288,8 +290,16 @@ async function handleUpdateDeckName(req, env) {
     return json({ ok: false, error: "deck not found" }, 404);
   }
 
-  // 返却は "deck_name": null でも良いし、空文字に戻しても良い
   return json({ ok: true, my_deck_key: myDeckKey, deck_name: norm.value }, 200);
+}
+
+async function handleMyDeckCards(env, url) {
+  const myDeckKey = (url.searchParams.get("my_deck_key") || "").trim();
+  if (!myDeckKey) return json({ ok: false, error: "my_deck_key required" }, 400);
+
+  const out = await getMyDeckCards(env, myDeckKey);
+
+  return json({ ok: true, my_deck_key: myDeckKey, ...out }, 200);
 }
 
 /** ---------- worker ---------- */
@@ -305,6 +315,8 @@ export default {
         "GET /api/cards": async (req, env) => await handleCards(req, env),
 
         "GET /api/players": async (_req, env, url) => await handlePlayers(env, url),
+
+				"GET /api/my-deck-cards": async (_req, env, url) => await handleMyDeckCards(env, url),
 
         "POST /api/sync": async (_req, env, url) => await handleSyncHttp(env, url),
 
