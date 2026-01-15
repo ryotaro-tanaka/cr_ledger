@@ -51,17 +51,22 @@ export default function MatchupPage() {
   if ((loading || cardsLoading) && !data) return <FullPageLoading label="Loading matchup..." />;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between">
-        <h1 className="text-xl font-semibold">Matchup</h1>
-        <div className="text-xs text-neutral-400">last={last}</div>
+    <section className="mx-auto max-w-md space-y-3 px-4 pt-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Matchup</h1>
+          <div className="mt-1 text-xs text-slate-500">Hard matchups (lower win first)</div>
+        </div>
+        <div className="text-[11px] text-slate-500">last={last}</div>
       </div>
 
       {cardsError ? <ApiErrorPanel title="Cards error" detail={cardsError} /> : null}
       {err ? <ApiErrorPanel detail={err} /> : null}
 
       {!loading && !err && data && list.length === 0 ? (
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 text-sm text-neutral-300">No results.</div>
+        <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 text-sm text-slate-700 shadow-sm backdrop-blur">
+          No results.
+        </div>
       ) : null}
 
       <div className="space-y-2">
@@ -82,15 +87,15 @@ export default function MatchupPage() {
                 { label: "battles", value: num(mc.battles) },
               ]}
               expanded={
-                <div className="grid grid-cols-2 gap-2 text-xs text-neutral-200">
-                  <div className="text-neutral-400">battles</div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-800">
+                  <div className="text-slate-500">battles</div>
                   <div className="text-right">{num(mc.battles)}</div>
-                  <div className="text-neutral-400">wins</div>
+                  <div className="text-slate-500">wins</div>
                   <div className="text-right">{num(mc.wins)}</div>
-                  <div className="text-neutral-400">losses</div>
+                  <div className="text-slate-500">losses</div>
                   <div className="text-right">{num(mc.losses)}</div>
-                  <div className="text-neutral-400">win_rate</div>
-                  <div className="text-right font-semibold">{pct01(mc.win_rate)}</div>
+                  <div className="text-slate-500">win_rate</div>
+                  <div className="text-right font-semibold text-slate-900">{pct01(mc.win_rate)}</div>
                 </div>
               }
             />
@@ -98,8 +103,10 @@ export default function MatchupPage() {
         })}
 
         <div ref={sentinelRef} />
-        {hasMore ? <div className="py-2 text-center text-xs text-neutral-500">Loading more…</div> : null}
+        {hasMore ? <div className="py-2 text-center text-xs text-slate-500">Loading more…</div> : null}
       </div>
+
+      <div style={{ height: "calc(92px + var(--safe-bottom))" }} />
     </section>
   );
 }
