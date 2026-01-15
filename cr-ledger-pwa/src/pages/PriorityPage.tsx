@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getPriority } from "../api/api";
 import type { PriorityResponse } from "../api/types";
 import { useSelection } from "../lib/selection";

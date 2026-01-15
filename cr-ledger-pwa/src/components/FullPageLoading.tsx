@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function FullPageLoading({ label }: { label?: string }) {
   return (
     <div className="flex items-center justify-center py-12">

@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function ApiErrorPanel({ title, detail }: { title?: string; detail: string }) {
   return (
     <div className="rounded-2xl border border-red-900/40 bg-red-950/30 p-4">

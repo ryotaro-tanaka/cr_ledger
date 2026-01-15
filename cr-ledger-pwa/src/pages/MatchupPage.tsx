@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getMatchupByCard } from "../api/api";
 import type { MatchupByCardResponse } from "../api/types";
 import { useSelection } from "../lib/selection";

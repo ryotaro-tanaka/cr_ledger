@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getOpponentTrendLast, getPriority, sync } from "../api/api";
 import type { OpponentTrendResponse, PriorityResponse, SyncResponse } from "../api/types";

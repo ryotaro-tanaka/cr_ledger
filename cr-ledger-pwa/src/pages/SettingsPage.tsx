@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyDecks, getPlayers } from "../api/api";
 import type { MyDecksResponse, PlayersResponse } from "../api/types";
