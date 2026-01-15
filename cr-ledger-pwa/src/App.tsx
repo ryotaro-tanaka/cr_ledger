@@ -20,14 +20,7 @@ function RequireSelection({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="min-h-dvh bg-neutral-950 text-neutral-50">
-      <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-md items-center justify-between px-4">
-          <div className="font-semibold tracking-tight">CR Ledger</div>
-          <div className="text-xs text-neutral-400">PWA</div>
-        </div>
-      </header>
-
+    <div className="min-h-dvh text-neutral-50">
       <main className="mx-auto max-w-md px-4 pb-24 pt-4">
         <Routes>
           <Route

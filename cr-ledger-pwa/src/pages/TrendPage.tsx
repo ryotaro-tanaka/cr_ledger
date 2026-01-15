@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getOpponentTrendLast } from "../api/api";
 import type { OpponentTrendResponse } from "../api/types";
 import { useSelection } from "../lib/selection";
@@ -55,17 +55,20 @@ export default function TrendPage() {
   if ((loading || cardsLoading) && !data) return <FullPageLoading label="Loading trend..." />;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between">
-        <h1 className="text-xl font-semibold">Trend</h1>
-        <div className="text-xs text-neutral-400">last={last}</div>
+    <section className="mx-auto max-w-md space-y-3 px-4 pt-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Trend</h1>
+          <div className="mt-1 text-xs text-slate-500">Most used opponent cards</div>
+        </div>
+        <div className="text-[11px] text-slate-500">last={last}</div>
       </div>
 
       {cardsError ? <ApiErrorPanel title="Cards error" detail={cardsError} /> : null}
       {err ? <ApiErrorPanel detail={err} /> : null}
 
       {!loading && !err && data && cards.length === 0 ? (
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 text-sm text-neutral-300">
+        <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 text-sm text-slate-700 shadow-sm backdrop-blur">
           No trend data.
         </div>
       ) : null}
@@ -80,28 +83,20 @@ export default function TrendPage() {
               key={`${c.card_id}:${c.slot_kind}`}
               iconUrl={icon}
               title={name}
-              subtitle={`${c.slot_kind}`}
+              subtitle={c.slot_kind}
               metrics={[
                 { label: "usage", value: pct01(c.usage_rate), strong: true },
                 { label: "battles", value: num(c.battles) },
               ]}
-              expanded={
-                <div className="grid grid-cols-2 gap-2 text-xs text-neutral-200">
-                  <div className="text-neutral-400">slot_kind</div>
-                  <div className="text-right">{c.slot_kind}</div>
-                  <div className="text-neutral-400">battles</div>
-                  <div className="text-right">{num(c.battles)}</div>
-                  <div className="text-neutral-400">usage_rate</div>
-                  <div className="text-right font-semibold">{pct01(c.usage_rate)}</div>
-                </div>
-              }
             />
           );
         })}
 
         <div ref={sentinelRef} />
-        {hasMore ? <div className="py-2 text-center text-xs text-neutral-500">Loading more…</div> : null}
+        {hasMore ? <div className="py-2 text-center text-xs text-slate-500">Loading more…</div> : null}
       </div>
+
+      <div style={{ height: "calc(92px + var(--safe-bottom))" }} />
     </section>
   );
 }

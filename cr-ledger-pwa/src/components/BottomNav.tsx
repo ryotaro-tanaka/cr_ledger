@@ -1,46 +1,66 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 
-type Item = {
-  to: string;
-  label: string;
-  icon: (active: boolean) => React.ReactNode;
-};
+type Item = { to: string; label: string; icon: React.ReactNode };
 
-function cls(active: boolean) {
-  return active ? "text-white" : "text-neutral-400 hover:text-neutral-200";
+function cx(...xs: Array<string | false | undefined | null>) {
+  return xs.filter(Boolean).join(" ");
 }
 
-const items: Item[] = [
-  { to: "/", label: "Home", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>⌂</span> },
-  { to: "/priority", label: "Priority", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>🎯</span> },
-  { to: "/matchup", label: "Matchup", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>⚔️</span> },
-  { to: "/trend", label: "Trend", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>📈</span> },
-  { to: "/settings", label: "Settings", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>⚙</span> },
-];
-
 export default function BottomNav() {
+  const items: Item[] = [
+    { to: "/", label: "Home", icon: <span className="text-[18px] leading-none">🏠</span> },
+    { to: "/priority", label: "Priority", icon: <span className="text-[18px] leading-none">🎯</span> },
+    { to: "/matchup", label: "Matchup", icon: <span className="text-[18px] leading-none">⚔️</span> },
+    { to: "/trend", label: "Trend", icon: <span className="text-[18px] leading-none">📈</span> },
+    { to: "/settings", label: "Settings", icon: <span className="text-[18px] leading-none">⚙️</span> },
+  ];
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-800 bg-neutral-950/90 backdrop-blur">
-      <div className="mx-auto max-w-md px-2 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex h-16 items-center justify-between">
-          {items.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              className={({ isActive }) =>
-                ["flex w-full flex-col items-center justify-center gap-1 rounded-xl py-2", isActive ? "bg-neutral-900/60" : ""].join(" ")
-              }
-              end={it.to === "/"}
-            >
-              {({ isActive }) => (
-                <>
-                  <div className={cls(isActive)}>{it.icon(isActive)}</div>
-                  <div className={["text-[11px] leading-none", cls(isActive)].join(" ")}>{it.label}</div>
-                </>
-              )}
-            </NavLink>
-          ))}
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50"
+      style={{ paddingBottom: "var(--safe-bottom)" }}
+    >
+      {/* full width bar */}
+      <div className="border-t border-slate-200 bg-white/90 backdrop-blur py-4">
+        <div className="mx-auto max-w-md">
+          <div className="grid grid-cols-5">
+            {items.map((it) => (
+              <NavLink
+                key={it.to}
+                to={it.to}
+                className={({ isActive }) =>
+                  cx(
+                    "relative flex flex-col items-center justify-center py-2",
+                    "text-[11px] font-medium",
+                    "transition-colors",
+                    isActive ? "text-blue-700" : "text-slate-500 hover:text-slate-700"
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* subtle active indicator */}
+                    <div
+                      className={cx(
+                        "absolute left-1/2 top-0 h-[3px] w-10 -translate-x-1/2 rounded-b-full",
+                        isActive ? "bg-blue-600/60" : "bg-transparent"
+                      )}
+                    />
+                    <div
+                      className={cx(
+                        "grid place-items-center",
+                        isActive ? "text-blue-700" : "text-slate-500"
+                      )}
+                    >
+                      {it.icon}
+                    </div>
+                    <div className="mt-1 leading-none">{it.label}</div>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
         </div>
       </div>
     </nav>

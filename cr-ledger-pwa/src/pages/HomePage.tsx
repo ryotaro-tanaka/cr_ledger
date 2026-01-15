@@ -1,254 +1,289 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getOpponentTrendLast, getPriority, sync } from "../api/api";
-import type { OpponentTrendResponse, PriorityResponse, SyncResponse } from "../api/types";
+import { sync, getPriority, getOpponentTrendLast } from "../api/api";
+import type { PriorityResponse, OpponentTrendResponse, SyncResponse } from "../api/types";
 import { useSelection } from "../lib/selection";
 import { toErrorText } from "../lib/errors";
-import ApiErrorPanel from "../components/ApiErrorPanel";
 import { useCardMaster } from "../cards/useCardMaster";
+import ApiErrorPanel from "../components/ApiErrorPanel";
 
-type SectionState<T> = {
-  data: T | null;
-  loading: boolean;
-  err: string | null;
-};
+type Thumb = { card_id: number; slot_kind: "normal" | "evolution" | "hero" | "support" };
 
-function num(v: number): string {
-  return String(Math.trunc(v));
+function cx(...xs: Array<string | false | undefined | null>) {
+  return xs.filter(Boolean).join(" ");
 }
 
 export default function HomePage() {
   const nav = useNavigate();
   const { player, deckKey } = useSelection();
+  const { master, loading: cardsLoading, error: cardsError } = useCardMaster();
 
-  // NOTE: Cards master is optional here — never block initial paint.
-  const { master, error: cardsError } = useCardMaster();
+  const last = 500;
 
-  // Sync state
+  // --- Sync ---
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncRes, setSyncRes] = useState<SyncResponse | null>(null);
   const [syncErr, setSyncErr] = useState<string | null>(null);
 
-  // Dashboard sections (independent + non-blocking)
-  const [priorityState, setPriorityState] = useState<SectionState<PriorityResponse>>({
-    data: null,
-    loading: false,
-    err: null,
-  });
-  const [trendState, setTrendState] = useState<SectionState<OpponentTrendResponse>>({
-    data: null,
-    loading: false,
-    err: null,
-  });
+  // --- Priority top ---
+  const [pLoading, setPLoading] = useState(false);
+  const [pErr, setPErr] = useState<string | null>(null);
+  const [pData, setPData] = useState<PriorityResponse | null>(null);
 
-  const lastPriority = 500;
-  const lastTrend = 500;
+  // --- Trend top ---
+  const [tLoading, setTLoading] = useState(false);
+  const [tErr, setTErr] = useState<string | null>(null);
+  const [tData, setTData] = useState<OpponentTrendResponse | null>(null);
 
-  // Fetch Priority (non-blocking)
-  useEffect(() => {
-    if (!player || !deckKey) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      setPriorityState((s) => ({ ...s, loading: true, err: null }));
-      try {
-        const res = await getPriority(player.player_tag, deckKey, lastPriority);
-        res.cards.sort((a, b) => b.priority_score - a.priority_score);
-        if (!cancelled) setPriorityState({ data: res, loading: false, err: null });
-      } catch (e) {
-        if (!cancelled) setPriorityState({ data: null, loading: false, err: toErrorText(e) });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [player, deckKey]);
-
-  // Fetch Trend (non-blocking)
+  // Load Priority + Trend after first paint (asynchronous)
   useEffect(() => {
     if (!player) return;
 
-    let cancelled = false;
+    // Priority needs player + deck
+    if (deckKey) {
+      void (async () => {
+        setPLoading(true);
+        setPErr(null);
+        try {
+          const res = await getPriority(player.player_tag, deckKey, last);
+          res.cards.sort((a, b) => b.priority_score - a.priority_score);
+          setPData(res);
+        } catch (e) {
+          setPErr(toErrorText(e));
+        } finally {
+          setPLoading(false);
+        }
+      })();
+    } else {
+      setPData(null);
+    }
 
+    // Trend needs player
     void (async () => {
-      setTrendState((s) => ({ ...s, loading: true, err: null }));
+      setTLoading(true);
+      setTErr(null);
       try {
-        const res = await getOpponentTrendLast(player.player_tag, lastTrend);
+        const res = await getOpponentTrendLast(player.player_tag, last);
         res.cards.sort((a, b) => b.usage_rate - a.usage_rate);
-        if (!cancelled) setTrendState({ data: res, loading: false, err: null });
+        setTData(res);
       } catch (e) {
-        if (!cancelled) setTrendState({ data: null, loading: false, err: toErrorText(e) });
+        setTErr(toErrorText(e));
+      } finally {
+        setTLoading(false);
       }
     })();
+  }, [player, deckKey]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [player]);
+  const priorityTop: Thumb[] = useMemo(() => {
+    const cards = pData?.cards ?? [];
+    return cards.slice(0, 5).map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
+  }, [pData]);
 
-  const topPriority = useMemo(
-    () => (priorityState.data?.cards ?? []).slice(0, 5),
-    [priorityState.data]
-  );
-  const topTrend = useMemo(() => (trendState.data?.cards ?? []).slice(0, 5), [trendState.data]);
+  const trendTop: Thumb[] = useMemo(() => {
+    const cards = tData?.cards ?? [];
+    return cards.slice(0, 5).map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
+  }, [tData]);
 
-  // RequireSelection がいる想定なので通常は来ない
-  if (!player || !deckKey) return null;
+  const playerLabel = player ? `${player.player_name} (${player.player_tag})` : "(not selected)";
 
   return (
-    <section className="space-y-3">
-      {/* header */}
+    <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
+      {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Home</h1>
-        <div className="text-xs text-neutral-400">
-          {player.player_name} ({player.player_tag})
-        </div>
-        <div className="text-[10px] text-neutral-500 break-all">{deckKey}</div>
-      </div>
+        <div className="text-[22px] font-semibold tracking-tight text-slate-900">Home</div>
+        <div className="text-xs text-slate-500">{playerLabel}</div>
 
-      {/* Sync */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-medium text-neutral-200">Sync</div>
-          <div className="text-xs text-neutral-500">POST /api/sync</div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            disabled={syncLoading}
-            onClick={async () => {
-              setSyncLoading(true);
-              setSyncErr(null);
-              setSyncRes(null);
-              try {
-                const r = await sync(player.player_tag);
-                setSyncRes(r);
-              } catch (e) {
-                setSyncErr(toErrorText(e));
-              } finally {
-                setSyncLoading(false);
-              }
-            }}
-            className="rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm hover:bg-neutral-900 disabled:opacity-60"
-          >
-            {syncLoading ? "Syncing..." : "Sync now"}
-          </button>
-
-          {syncLoading ? <div className="text-xs text-neutral-400">Working...</div> : null}
-        </div>
-
-        {syncErr ? <ApiErrorPanel detail={syncErr} /> : null}
-
-        {syncRes ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-xs text-neutral-200/80">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="text-neutral-400">upserted</div>
-              <div className="text-right">{num(syncRes.synced?.upserted ?? 0)}</div>
-              <div className="text-neutral-400">total_fetched</div>
-              <div className="text-right">{num(syncRes.synced?.total_fetched ?? 0)}</div>
-              <div className="text-neutral-400">stopped_early</div>
-              <div className="text-right">{num(syncRes.synced?.stopped_early ?? 0)}</div>
+        {!player || !deckKey ? (
+          <div className="mt-2 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm text-slate-700 shadow-sm">
+            Setup is required. Please select <span className="font-semibold">Player</span> and{" "}
+            <span className="font-semibold">Deck</span> in Settings.
+            <div className="mt-2">
+              <button
+                onClick={() => nav("/settings")}
+                className="inline-flex items-center rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+              >
+                Open Settings →
+              </button>
             </div>
           </div>
         ) : null}
       </div>
 
-      {/* Cards master error is non-fatal for Home */}
+      {/* Global errors (cards master) */}
       {cardsError ? <ApiErrorPanel title="Cards error" detail={cardsError} /> : null}
 
-      {/* Priority (Top 5) - image focused */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-medium text-neutral-200">Priority</div>
-          <button onClick={() => nav("/priority")} className="text-xs text-neutral-400 hover:text-neutral-200">
+      {/* Sync card */}
+      <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">Sync</div>
+          <div className="text-xs text-slate-500">POST /api/sync</div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            disabled={!player || syncLoading}
+            onClick={() => {
+              if (!player) return;
+              void (async () => {
+                setSyncLoading(true);
+                setSyncErr(null);
+                setSyncRes(null);
+                try {
+                  const res = await sync(player.player_tag);
+                  setSyncRes(res);
+                } catch (e) {
+                  setSyncErr(toErrorText(e));
+                } finally {
+                  setSyncLoading(false);
+                }
+              })();
+            }}
+            className={cx(
+              "rounded-xl px-4 py-2 text-sm font-semibold shadow-sm",
+              "transition",
+              !player || syncLoading
+                ? "bg-slate-200 text-slate-500"
+                : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.99]"
+            )}
+          >
+            {syncLoading ? "Syncing..." : "Sync now"}
+          </button>
+
+          <div className="text-xs text-slate-500">{syncLoading ? "Working..." : null}</div>
+        </div>
+
+        {syncErr ? (
+          <div className="mt-3">
+            <ApiErrorPanel detail={syncErr} />
+          </div>
+        ) : null}
+
+        {syncRes ? (
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="text-xs text-slate-500">Result</div>
+            <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] text-slate-700">
+              {JSON.stringify(syncRes, null, 2)}
+            </pre>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Priority preview */}
+      <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">Priority</div>
+          <button
+            onClick={() => nav("/priority")}
+            className="text-xs font-medium text-blue-700 hover:text-blue-800"
+          >
             Open →
           </button>
         </div>
 
-        {priorityState.err ? <ApiErrorPanel detail={priorityState.err} /> : null}
+        <div className="mt-2 text-xs text-slate-500">last={last} · top 5 cards</div>
 
-        {priorityState.loading && topPriority.length === 0 ? (
-          <div className="text-sm text-neutral-400">Loading…</div>
-        ) : topPriority.length === 0 ? (
-          <div className="text-sm text-neutral-400">No data.</div>
-        ) : (
-          <div className="grid grid-cols-5 gap-2">
-            {topPriority.map((c) => {
-              const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
-              const title = master?.getName(c.card_id) ?? `#${c.card_id}`;
-
-              return (
-                <button
-                  key={`${c.card_id}:${c.slot_kind}`}
-                  onClick={() => nav("/priority")}
-                  className="rounded-2xl border border-neutral-800 bg-neutral-950 p-1 hover:bg-neutral-900"
-                  title={title}
-                >
-                  <div className="aspect-square overflow-hidden rounded-xl bg-neutral-900">
-                    {icon ? (
-                      <img src={icon} alt={title} className="h-full w-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="h-full w-full" />
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+        {pErr ? (
+          <div className="mt-3">
+            <ApiErrorPanel detail={pErr} />
           </div>
-        )}
+        ) : null}
 
-        <div className="text-[11px] text-neutral-500">
-          last={lastPriority} · top 5 cards (tap to open Priority tab)
+        {!deckKey ? (
+          <div className="mt-3 text-sm text-slate-600">Select a deck in Settings to see Priority.</div>
+        ) : null}
+
+        <div className="mt-3">
+          {pLoading || cardsLoading ? (
+            <div className="text-sm text-slate-500">Loading...</div>
+          ) : priorityTop.length === 0 && deckKey ? (
+            <div className="text-sm text-slate-600">No priority data.</div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {priorityTop.map((c) => {
+                const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+                const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+
+                return (
+                  <div key={`${c.card_id}:${c.slot_kind}`} className="shrink-0">
+                    <div className="h-14 w-14 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      {icon ? (
+                        <img
+                          src={icon}
+                          alt={name}
+                          className="h-full w-full rounded-2xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center text-[10px] text-slate-500">
+                          #{c.card_id}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Trend (Top 5) - image focused */}
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-medium text-neutral-200">Trend</div>
-          <button onClick={() => nav("/trend")} className="text-xs text-neutral-400 hover:text-neutral-200">
+      {/* Trend preview */}
+      <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">Trend</div>
+          <button
+            onClick={() => nav("/trend")}
+            className="text-xs font-medium text-blue-700 hover:text-blue-800"
+          >
             Open →
           </button>
         </div>
 
-        {trendState.err ? <ApiErrorPanel detail={trendState.err} /> : null}
+        <div className="mt-2 text-xs text-slate-500">last={last} · top 5 cards</div>
 
-        {trendState.loading && topTrend.length === 0 ? (
-          <div className="text-sm text-neutral-400">Loading…</div>
-        ) : topTrend.length === 0 ? (
-          <div className="text-sm text-neutral-400">No data.</div>
-        ) : (
-          <div className="grid grid-cols-5 gap-2">
-            {topTrend.map((c) => {
-              const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
-              const title = master?.getName(c.card_id) ?? `#${c.card_id}`;
-
-              return (
-                <button
-                  key={`${c.card_id}:${c.slot_kind}`}
-                  onClick={() => nav("/trend")}
-                  className="rounded-2xl border border-neutral-800 bg-neutral-950 p-1 hover:bg-neutral-900"
-                  title={title}
-                >
-                  <div className="aspect-square overflow-hidden rounded-xl bg-neutral-900">
-                    {icon ? (
-                      <img src={icon} alt={title} className="h-full w-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="h-full w-full" />
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+        {tErr ? (
+          <div className="mt-3">
+            <ApiErrorPanel detail={tErr} />
           </div>
-        )}
+        ) : null}
 
-        <div className="text-[11px] text-neutral-500">
-          last={lastTrend} · top 5 cards (tap to open Trend tab)
+        <div className="mt-3">
+          {tLoading || cardsLoading ? (
+            <div className="text-sm text-slate-500">Loading...</div>
+          ) : trendTop.length === 0 ? (
+            <div className="text-sm text-slate-600">No trend data.</div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {trendTop.map((c) => {
+                const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+                const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+
+                return (
+                  <div key={`${c.card_id}:${c.slot_kind}`} className="shrink-0">
+                    <div className="h-14 w-14 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      {icon ? (
+                        <img
+                          src={icon}
+                          alt={name}
+                          className="h-full w-full rounded-2xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center text-[10px] text-slate-500">
+                          #{c.card_id}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Spacer for bottom nav */}
+      <div style={{ height: "calc(92px + var(--safe-bottom))" }} />
     </section>
   );
 }
