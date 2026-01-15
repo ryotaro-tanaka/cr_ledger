@@ -73,15 +73,17 @@ export default function PriorityPage() {
         {visible.map((pc) => {
           const name = master?.getName(pc.card_id) ?? `#${pc.card_id}`;
           const icon = master?.getIconUrl(pc.card_id, pc.slot_kind) ?? null;
+
           const isSmallSample = pc.deck_battles_with_card < 10;
-          const subtitle = `${pc.slot_kind}${isSmallSample ? " • small sample" : ""}`;
 
           return (
             <CardRow
               key={`${pc.card_id}:${pc.slot_kind}`}
               iconUrl={icon}
               title={name}
-              subtitle={subtitle}
+              subtitle={pc.slot_kind}
+              badge={isSmallSample ? "small sample" : undefined}
+              tone={isSmallSample ? "warn" : "default"}
               metrics={[
                 { label: "priority", value: pc.priority_score.toFixed(3), strong: true },
                 { label: "usage", value: pct01(pc.usage_rate) },
@@ -89,14 +91,14 @@ export default function PriorityPage() {
               ]}
               expanded={
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-800">
-                  <div className="text-slate-500">deck_battles_with_card</div>
+                  <div className="text-slate-500">deck battles</div>
                   <div className="text-right">{num(pc.deck_battles_with_card)}</div>
-                  <div className="text-slate-500">usage_rate</div>
-                  <div className="text-right">{pct01(pc.usage_rate)}</div>
-                  <div className="text-slate-500">win_rate</div>
-                  <div className="text-right">{pct01(pc.win_rate)}</div>
-                  <div className="text-slate-500">priority_score</div>
-                  <div className="text-right font-semibold text-slate-900">{pc.priority_score.toFixed(6)}</div>
+
+                  {isSmallSample ? (
+                    <div className="col-span-2 mt-1 text-[11px] text-slate-500">
+                      Small sample: priority may be noisy.
+                    </div>
+                  ) : null}
                 </div>
               }
             />

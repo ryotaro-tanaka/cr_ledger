@@ -73,29 +73,33 @@ export default function MatchupPage() {
         {visible.map((mc) => {
           const name = master?.getName(mc.card_id) ?? `#${mc.card_id}`;
           const icon = master?.getIconUrl(mc.card_id, mc.slot_kind) ?? null;
+
           const isSmallSample = mc.battles < 10;
-          const subtitle = `${mc.slot_kind}${isSmallSample ? " • small sample" : ""}`;
 
           return (
             <CardRow
               key={`${mc.card_id}:${mc.slot_kind}`}
               iconUrl={icon}
               title={name}
-              subtitle={subtitle}
+              subtitle={mc.slot_kind}
+              badge={isSmallSample ? "small sample" : undefined}
+              tone={isSmallSample ? "warn" : "default"}
               metrics={[
                 { label: "win", value: pct01(mc.win_rate), strong: true },
                 { label: "battles", value: num(mc.battles) },
               ]}
               expanded={
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-800">
-                  <div className="text-slate-500">battles</div>
-                  <div className="text-right">{num(mc.battles)}</div>
                   <div className="text-slate-500">wins</div>
                   <div className="text-right">{num(mc.wins)}</div>
                   <div className="text-slate-500">losses</div>
                   <div className="text-right">{num(mc.losses)}</div>
-                  <div className="text-slate-500">win_rate</div>
-                  <div className="text-right font-semibold text-slate-900">{pct01(mc.win_rate)}</div>
+
+                  {isSmallSample ? (
+                    <div className="col-span-2 mt-1 text-[11px] text-slate-500">
+                      Small sample: results may be unstable.
+                    </div>
+                  ) : null}
                 </div>
               }
             />

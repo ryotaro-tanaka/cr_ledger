@@ -12,7 +12,11 @@ export default function CardRow(props: {
   subtitle?: string;
   metrics: Metric[];
   expanded?: React.ReactNode;
+
+  badge?: string;
+  tone?: "default" | "warn";
 }) {
+  const expandable = !!props.expanded;
   const [open, setOpen] = useState(false);
 
   const metricView = useMemo(() => {
@@ -26,17 +30,18 @@ export default function CardRow(props: {
     ));
   }, [props.metrics]);
 
-  return (
-    <button
-      type="button"
-      onClick={() => setOpen((v) => !v)}
-      className={cx(
-        "w-full select-none text-left",
-        "rounded-[22px] border border-slate-200 bg-white/80 shadow-sm backdrop-blur",
-        "px-3.5 py-3.5",
-        "transition hover:bg-white active:scale-[0.995]"
-      )}
-    >
+  const baseCardClass = cx(
+    "w-full select-none text-left",
+    "rounded-[22px] border shadow-sm backdrop-blur",
+    "px-3.5 py-3.5",
+    "transition",
+    props.tone === "warn"
+      ? "border-amber-200 bg-amber-50/70 hover:bg-amber-50"
+      : "border-slate-200 bg-white/80 hover:bg-white"
+  );
+
+  const header = (
+    <>
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {props.iconUrl ? (
@@ -49,18 +54,45 @@ export default function CardRow(props: {
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-slate-900">{props.title}</div>
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{props.title}</div>
+
+            {props.badge ? (
+              <div className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                {props.badge}
+              </div>
+            ) : null}
+          </div>
+
           {props.subtitle ? <div className="mt-0.5 truncate text-xs text-slate-500">{props.subtitle}</div> : null}
         </div>
 
         <div className="flex items-center gap-3">{metricView}</div>
+
+        {expandable ? (
+          <div className="ml-1 shrink-0 text-slate-400">
+            <span className={cx("inline-block text-[14px] transition", open ? "rotate-180" : "")}>⌄</span>
+          </div>
+        ) : null}
       </div>
 
-      {open && props.expanded ? (
-        <div className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-3">
-          {props.expanded}
-        </div>
+      {expandable && open ? (
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-3">{props.expanded}</div>
       ) : null}
+    </>
+  );
+
+  if (!expandable) {
+    return <div className={baseCardClass}>{header}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      className={cx(baseCardClass, "active:scale-[0.995]")}
+    >
+      {header}
     </button>
   );
 }

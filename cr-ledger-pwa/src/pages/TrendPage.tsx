@@ -83,21 +83,11 @@ export default function TrendPage() {
               key={`${c.card_id}:${c.slot_kind}`}
               iconUrl={icon}
               title={name}
-              subtitle={`${c.slot_kind}`}
+              subtitle={c.slot_kind}
               metrics={[
                 { label: "usage", value: pct01(c.usage_rate), strong: true },
                 { label: "battles", value: num(c.battles) },
               ]}
-              expanded={
-                <div className="grid grid-cols-2 gap-2 text-xs text-slate-800">
-                  <div className="text-slate-500">slot_kind</div>
-                  <div className="text-right">{c.slot_kind}</div>
-                  <div className="text-slate-500">battles</div>
-                  <div className="text-right">{num(c.battles)}</div>
-                  <div className="text-slate-500">usage_rate</div>
-                  <div className="text-right font-semibold text-slate-900">{pct01(c.usage_rate)}</div>
-                </div>
-              }
             />
           );
         })}
