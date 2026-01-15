@@ -7,7 +7,28 @@ import { toErrorText } from "../lib/errors";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import { useCardMaster } from "../cards/useCardMaster";
 
+
+function isStandalonePWA(): boolean {
+  const mql = window.matchMedia?.("(display-mode: standalone)");
+  const displayModeStandalone = !!mql?.matches;
+
+  // iOS Safari legacy: navigator.standalone (boolean)
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  const iosStandalone = nav.standalone === true;
+
+  return displayModeStandalone || iosStandalone;
+}
+
+
 export default function SettingsPage() {
+  
+  //
+  const standalone = isStandalonePWA();
+  console.log("standalone?", standalone);
+
+
+
+  
   const nav = useNavigate();
   const { player, setPlayer, clearPlayer, deckKey, setDeckKey, clearDeckKey } = useSelection();
 
@@ -76,6 +97,7 @@ export default function SettingsPage() {
       <div className="flex items-end justify-between">
         <h1 className="text-xl font-semibold">Settings</h1>
         <div className="text-xs text-neutral-400">{hint}</div>
+        <div className="text-xs" style={{ color: "var(--muted)" }}>standalone: {String(standalone)}</div>
       </div>
 
       {/* Selected */}

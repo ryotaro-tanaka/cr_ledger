@@ -17,7 +17,25 @@ function num(v: number): string {
   return String(Math.trunc(v));
 }
 
+function isStandalonePWA(): boolean {
+  const mql = window.matchMedia?.("(display-mode: standalone)");
+  const displayModeStandalone = !!mql?.matches;
+
+  // iOS Safari legacy: navigator.standalone (boolean)
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  const iosStandalone = nav.standalone === true;
+
+  return displayModeStandalone || iosStandalone;
+}
+
 export default function HomePage() {
+  //
+  const standalone = isStandalonePWA();
+  console.log("standalone?", standalone);
+
+
+
+
   const nav = useNavigate();
   const { player, deckKey } = useSelection();
 
@@ -102,6 +120,8 @@ export default function HomePage() {
       {/* header */}
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Home</h1>
+        <div className="text-xs" style={{ color: "var(--muted)" }}>standalone: {String(standalone)}</div>
+
         <div className="text-xs text-neutral-400">
           {player.player_name} ({player.player_tag})
         </div>
