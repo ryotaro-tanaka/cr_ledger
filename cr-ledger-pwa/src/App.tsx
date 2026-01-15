@@ -2,17 +2,17 @@ import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import BottomNav from "./components/BottomNav";
 import HomePage from "./pages/HomePage";
-import DecksPage from "./pages/DecksPage";
-import DeckDetailPage from "./pages/DeckDetailPage";
+import PriorityPage from "./pages/PriorityPage";
+import MatchupPage from "./pages/MatchupPage";
 import TrendPage from "./pages/TrendPage";
 import SettingsPage from "./pages/SettingsPage";
-import { usePlayer } from "./lib/player";
+import { useSelection } from "./lib/selection";
 
-function RequirePlayer({ children }: { children: React.ReactNode }) {
-  const { player } = usePlayer();
+function RequireSelection({ children }: { children: React.ReactNode }) {
+  const { player, deckKey } = useSelection();
   const loc = useLocation();
 
-  if (!player) {
+  if (!player || !deckKey) {
     return <Navigate to="/settings" replace state={{ from: loc.pathname }} />;
   }
   return <>{children}</>;
@@ -33,38 +33,35 @@ export default function App() {
           <Route
             path="/"
             element={
-              <RequirePlayer>
+              <RequireSelection>
                 <HomePage />
-              </RequirePlayer>
-            }
-          />
-
-          <Route
-            path="/decks"
-            element={
-              <RequirePlayer>
-                <DecksPage />
-              </RequirePlayer>
+              </RequireSelection>
             }
           />
           <Route
-            path="/decks/:deckKey"
+            path="/priority"
             element={
-              <RequirePlayer>
-                <DeckDetailPage />
-              </RequirePlayer>
+              <RequireSelection>
+                <PriorityPage />
+              </RequireSelection>
             }
           />
-
+          <Route
+            path="/matchup"
+            element={
+              <RequireSelection>
+                <MatchupPage />
+              </RequireSelection>
+            }
+          />
           <Route
             path="/trend"
             element={
-              <RequirePlayer>
+              <RequireSelection>
                 <TrendPage />
-              </RequirePlayer>
+              </RequireSelection>
             }
           />
-
           <Route path="/settings" element={<SettingsPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />

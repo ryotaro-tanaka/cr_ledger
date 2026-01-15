@@ -1,6 +1,7 @@
-import type { Player } from "./player";
+import type { Player } from "./types";
 
 const KEY_SELECTED_PLAYER = "cr-ledger:selectedPlayer";
+const KEY_SELECTED_DECK = "cr-ledger:selectedDeckKey";
 
 export function loadSelectedPlayer(): Player | null {
   try {
@@ -25,6 +26,33 @@ export function saveSelectedPlayer(p: Player) {
 export function clearSelectedPlayer() {
   try {
     localStorage.removeItem(KEY_SELECTED_PLAYER);
+  } catch {
+    // ignore
+  }
+}
+
+// --- deck ---
+export function loadSelectedDeckKey(): string | null {
+  try {
+    const v = localStorage.getItem(KEY_SELECTED_DECK);
+    if (!v) return null;
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSelectedDeckKey(deckKey: string) {
+  try {
+    localStorage.setItem(KEY_SELECTED_DECK, deckKey);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearSelectedDeckKey() {
+  try {
+    localStorage.removeItem(KEY_SELECTED_DECK);
   } catch {
     // ignore
   }

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getOpponentTrendLast } from "../api/api";
 import type { OpponentTrendResponse } from "../api/types";
-import { usePlayer } from "../lib/player";
+import { useSelection } from "../lib/selection";
 import { toErrorText } from "../lib/errors";
 import { useCardMaster } from "../cards/useCardMaster";
 import ApiErrorPanel from "../components/ApiErrorPanel";
@@ -18,7 +18,7 @@ function num(v: number): string {
 }
 
 export default function TrendPage() {
-  const { player } = usePlayer();
+  const { player } = useSelection();
   const [data, setData] = useState<OpponentTrendResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -45,7 +45,11 @@ export default function TrendPage() {
   }, [player]);
 
   const cards = useMemo(() => data?.cards ?? [], [data]);
-  const { count, hasMore, sentinelRef } = useInfiniteCount({ total: cards.length, initial: 15, step: 15 });
+  const { count, hasMore, sentinelRef } = useInfiniteCount({
+    total: cards.length,
+    initial: 15,
+    step: 15,
+  });
   const visible = useMemo(() => cards.slice(0, count), [cards, count]);
 
   if ((loading || cardsLoading) && !data) return <FullPageLoading label="Loading trend..." />;

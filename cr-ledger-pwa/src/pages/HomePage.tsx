@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { ApiError, AuthError, sync } from "../api/api";
-import { usePlayer } from "../lib/player";
+import { sync } from "../api/api";
 import type { SyncResponse } from "../api/types";
+import { useSelection } from "../lib/selection";
+import { toErrorText } from "../lib/errors";
+import ApiErrorPanel from "../components/ApiErrorPanel";
 
 export default function HomePage() {
-  const { player } = usePlayer();
+  const { player } = useSelection();
   const [loading, setLoading] = useState(false);
   const [res, setRes] = useState<SyncResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  if (!player) return null; // RequirePlayerがいるので通常来ない
+  if (!player) return null; // RequireSelectionがいるので通常来ない
 
   return (
     <section className="space-y-3">
@@ -32,10 +34,7 @@ export default function HomePage() {
                 const r = await sync(player.player_tag);
                 setRes(r);
               } catch (e) {
-                if (e instanceof AuthError) setErr(e.message);
-                else if (e instanceof ApiError) setErr(`${e.status}\n${e.bodyText}`);
-                else if (e instanceof Error) setErr(e.message);
-                else setErr("Unknown error");
+                setErr(toErrorText(e));
               } finally {
                 setLoading(false);
               }
@@ -49,9 +48,9 @@ export default function HomePage() {
         </div>
 
         {err ? (
-          <pre className="mt-3 whitespace-pre-wrap break-words rounded-xl border border-red-900/40 bg-red-950/30 p-3 text-xs text-red-200/80">
-            {err}
-          </pre>
+          <div className="mt-3">
+            <ApiErrorPanel detail={err} />
+          </div>
         ) : null}
 
         {res ? (
@@ -62,9 +61,7 @@ export default function HomePage() {
       </div>
 
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
-        <div className="text-sm text-neutral-300">
-          Next: summary cards (priority top 15 / trend top 15).
-        </div>
+        <div className="text-sm text-neutral-300">Next: summary cards (priority top 15 / trend top 15).</div>
       </div>
     </section>
   );

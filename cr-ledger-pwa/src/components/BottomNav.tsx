@@ -8,40 +8,15 @@ type Item = {
 };
 
 function cls(active: boolean) {
-  return active
-    ? "text-white"
-    : "text-neutral-400 hover:text-neutral-200";
+  return active ? "text-white" : "text-neutral-400 hover:text-neutral-200";
 }
 
 const items: Item[] = [
-  {
-    to: "/",
-    label: "Home",
-    icon: (active) => (
-      <span className={active ? "opacity-100" : "opacity-70"}>⌂</span>
-    ),
-  },
-  {
-    to: "/decks",
-    label: "Decks",
-    icon: (active) => (
-      <span className={active ? "opacity-100" : "opacity-70"}>🃏</span>
-    ),
-  },
-  {
-    to: "/trend",
-    label: "Trend",
-    icon: (active) => (
-      <span className={active ? "opacity-100" : "opacity-70"}>📈</span>
-    ),
-  },
-  {
-    to: "/settings",
-    label: "Settings",
-    icon: (active) => (
-      <span className={active ? "opacity-100" : "opacity-70"}>⚙</span>
-    ),
-  },
+  { to: "/", label: "Home", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>⌂</span> },
+  { to: "/priority", label: "Priority", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>🎯</span> },
+  { to: "/matchup", label: "Matchup", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>⚔️</span> },
+  { to: "/trend", label: "Trend", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>📈</span> },
+  { to: "/settings", label: "Settings", icon: (a) => <span className={a ? "opacity-100" : "opacity-70"}>⚙</span> },
 ];
 
 export default function BottomNav() {
@@ -54,24 +29,14 @@ export default function BottomNav() {
               key={it.to}
               to={it.to}
               className={({ isActive }) =>
-                [
-                  "flex w-full flex-col items-center justify-center gap-1 rounded-xl py-2",
-                  isActive ? "bg-neutral-900/60" : "bg-transparent",
-                ].join(" ")
+                ["flex w-full flex-col items-center justify-center gap-1 rounded-xl py-2", isActive ? "bg-neutral-900/60" : ""].join(" ")
               }
               end={it.to === "/"}
             >
               {({ isActive }) => (
                 <>
                   <div className={cls(isActive)}>{it.icon(isActive)}</div>
-                  <div
-                    className={[
-                      "text-[11px] leading-none",
-                      cls(isActive),
-                    ].join(" ")}
-                  >
-                    {it.label}
-                  </div>
+                  <div className={["text-[11px] leading-none", cls(isActive)].join(" ")}>{it.label}</div>
                 </>
               )}
             </NavLink>
