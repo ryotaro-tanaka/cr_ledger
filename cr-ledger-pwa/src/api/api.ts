@@ -6,6 +6,7 @@ import type {
   RoyaleApiCardsResponse,
   SyncResponse,
   MatchupByCardResponse,
+  MyDeckCardsResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -112,4 +113,10 @@ export function getPriority(playerTag: string, myDeckKey: string, last: number):
 
 export function getCards(opts?: { nocache?: boolean }): Promise<RoyaleApiCardsResponse> {
   return request<RoyaleApiCardsResponse>("/api/cards", { params: { nocache: opts?.nocache ? 1 : undefined } });
+}
+
+export function getMyDeckCards(myDeckKey: string): Promise<MyDeckCardsResponse> {
+  return request<MyDeckCardsResponse>("/api/my-deck-cards", {
+    params: { my_deck_key: myDeckKey },
+  });
 }

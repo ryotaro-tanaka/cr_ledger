@@ -86,3 +86,13 @@ export type RoyaleApiCardsResponse = {
     iconUrls?: { medium?: string };
   }>;
 };
+
+export type MyDeckCardsResponse = {
+  ok: true;
+  my_deck_key: string;
+  cards: Array<{
+    slot: number;
+    card_id: number;
+    slot_kind: SlotKind;
+  }>;
+};
