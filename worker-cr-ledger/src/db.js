@@ -431,3 +431,14 @@ export async function listPlayers(env, firstPlayerTagDb = "GYVCJJCR0") {
 
   return { players: r.results || [] };
 }
+
+export async function updateDeckName(env, myDeckKey, deckNameOrNull) {
+  const r = await env.DB.prepare(`
+    UPDATE my_decks
+    SET deck_name = ?
+    WHERE my_deck_key = ?
+  `).bind(deckNameOrNull, myDeckKey).run();
+
+  const changes = r?.meta?.changes ?? r?.changes ?? 0;
+  return { changes };
+}

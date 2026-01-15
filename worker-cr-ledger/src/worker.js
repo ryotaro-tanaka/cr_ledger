@@ -1,5 +1,4 @@
 import { crJson, crCards } from "./cr_api.js";
-import { battleExists } from "./db.js";
 import {
   normalizeTagForApi,
   normalizeTagForDb,
@@ -12,6 +11,7 @@ import {
 } from "./domain.js";
 
 import {
+	battleExists,
   upsertMePlayer,
   insertDeckIfNotExists,
   upsertMyDeckCardsAsFetched,
@@ -22,10 +22,11 @@ import {
   statsMatchupByCardLast,
   statsPriorityLast,
   statsMyDecksLast,
-  listPlayers
+  listPlayers,
+	updateDeckName
 } from "./db.js";
 
-import { json, clampInt, route, handleFetch } from "./http.js";
+import { json, clampInt, route, handleFetch, readJson } from "./http.js";
 
 /** ---------- param helpers ---------- */
 
@@ -153,17 +154,17 @@ async function syncCore(env, tagApi) {
 async function handleRoot() {
   return new Response(
     [
-      "Welcome to CR Ledger API using CLI",
       "OK",
       "Try:",
-      "POST /api/sync?player_tag=GYVCJJCR0",
-      "GET  /api/players",
-      "GET  /api/stats/opponent-trend?player_tag=GYVCJJCR0&last=200",
-      "GET  /api/stats/opponent-trend?player_tag=GYVCJJCR0&since=20260101T000000.000Z",
-      "GET  /api/stats/my-decks?player_tag=GYVCJJCR0&last=200",
-      "GET  /api/stats/matchup-by-card?my_deck_key=...&last=500&min=10",
-      "GET  /api/stats/priority?player_tag=GYVCJJCR0&my_deck_key=...&last=500&min=10",
-      "GET  /api/cards?nocache=1",
+      "POST  /api/sync?player_tag=GYVCJJCR0",
+      "GET   /api/players",
+      "GET   /api/stats/opponent-trend?player_tag=GYVCJJCR0&last=200",
+      "GET   /api/stats/opponent-trend?player_tag=GYVCJJCR0&since=20260101T000000.000Z",
+      "GET   /api/stats/my-decks?player_tag=GYVCJJCR0&last=200",
+      "GET   /api/stats/matchup-by-card?my_deck_key=...&last=500&min=10",
+      "GET   /api/stats/priority?player_tag=GYVCJJCR0&my_deck_key=...&last=500&min=10",
+      "GET   /api/cards?nocache=1",
+      "PATCH /api/my-decks/name",
     ].join("\n"),
     { headers: { "content-type": "text/plain; charset=utf-8" } }
   );
@@ -257,6 +258,40 @@ async function handleCards(req, env) {
   return res;
 }
 
+function normalizeDeckNameAllowClear(v) {
+  // undefined/null はエラーにしたいならここで分ける
+  if (v === undefined) return { ok: false, error: "deck_name required" };
+
+  const s = (v ?? "").toString().trim();
+
+  // 空なら「クリア」扱いで NULL
+  if (s === "") return { ok: true, value: null };
+
+  // 長さ制限（好みで）
+  if (s.length > 40) return { ok: false, error: "deck_name too long (max 40)" };
+
+  return { ok: true, value: s };
+}
+
+async function handleUpdateDeckName(req, env) {
+  const body = await readJson(req);
+
+  const myDeckKey = (body?.my_deck_key ?? "").toString().trim();
+  if (!myDeckKey) return json({ ok: false, error: "my_deck_key required" }, 400);
+
+  const norm = normalizeDeckNameAllowClear(body?.deck_name);
+  if (!norm.ok) return json({ ok: false, error: norm.error }, 400);
+
+  const out = await updateDeckName(env, myDeckKey, norm.value);
+
+  if ((out.changes || 0) === 0) {
+    return json({ ok: false, error: "deck not found" }, 404);
+  }
+
+  // 返却は "deck_name": null でも良いし、空文字に戻しても良い
+  return json({ ok: true, my_deck_key: myDeckKey, deck_name: norm.value }, 200);
+}
+
 /** ---------- worker ---------- */
 
 export default {
@@ -280,6 +315,8 @@ export default {
         "GET /api/stats/matchup-by-card": async (_req, env, url) => await handleMatchupByCard(env, url),
 
         "GET /api/stats/priority": async (_req, env, url) => await handlePriority(env, url),
+
+				"PATCH /api/my-decks/name": async (req, env) => await handleUpdateDeckName(req, env),
       });
     });
   },
