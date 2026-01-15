@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { sync, getPriority, getOpponentTrendLast } from "../api/api";
-import type { PriorityResponse, OpponentTrendResponse, SyncResponse } from "../api/types";
+import { sync, getPriority, getMatchupByCard, getOpponentTrendLast } from "../api/api";
+import type {
+  PriorityResponse,
+  MatchupByCardResponse,
+  OpponentTrendResponse,
+  SyncResponse,
+} from "../api/types";
 import { useSelection } from "../lib/selection";
 import { toErrorText } from "../lib/errors";
 import { useCardMaster } from "../cards/useCardMaster";
@@ -30,12 +35,17 @@ export default function HomePage() {
   const [pErr, setPErr] = useState<string | null>(null);
   const [pData, setPData] = useState<PriorityResponse | null>(null);
 
+  // --- Matchup top (hardest) ---
+  const [mLoading, setMLoading] = useState(false);
+  const [mErr, setMErr] = useState<string | null>(null);
+  const [mData, setMData] = useState<MatchupByCardResponse | null>(null);
+
   // --- Trend top ---
   const [tLoading, setTLoading] = useState(false);
   const [tErr, setTErr] = useState<string | null>(null);
   const [tData, setTData] = useState<OpponentTrendResponse | null>(null);
 
-  // Load Priority + Trend after first paint (asynchronous)
+  // Load Priority + Matchup + Trend after first paint (asynchronous)
   useEffect(() => {
     if (!player) return;
 
@@ -54,8 +64,24 @@ export default function HomePage() {
           setPLoading(false);
         }
       })();
+
+      // Matchup needs deck (and playerTag depending on your API wrapper; here it uses playerTag+deckKey)
+      void (async () => {
+        setMLoading(true);
+        setMErr(null);
+        try {
+          const res = await getMatchupByCard(player.player_tag, deckKey, last);
+          res.cards.sort((a, b) => a.win_rate - b.win_rate); // hardest first
+          setMData(res);
+        } catch (e) {
+          setMErr(toErrorText(e));
+        } finally {
+          setMLoading(false);
+        }
+      })();
     } else {
       setPData(null);
+      setMData(null);
     }
 
     // Trend needs player
@@ -78,6 +104,11 @@ export default function HomePage() {
     const cards = pData?.cards ?? [];
     return cards.slice(0, 5).map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
   }, [pData]);
+
+  const matchupTop: Thumb[] = useMemo(() => {
+    const cards = mData?.cards ?? [];
+    return cards.slice(0, 5).map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
+  }, [mData]);
 
   const trendTop: Thumb[] = useMemo(() => {
     const cards = tData?.cards ?? [];
@@ -172,10 +203,7 @@ export default function HomePage() {
       <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold text-slate-900">Priority</div>
-          <button
-            onClick={() => nav("/priority")}
-            className="text-xs font-medium text-blue-700 hover:text-blue-800"
-          >
+          <button onClick={() => nav("/priority")} className="text-xs font-medium text-blue-700 hover:text-blue-800">
             Open →
           </button>
         </div>
@@ -188,9 +216,7 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {!deckKey ? (
-          <div className="mt-3 text-sm text-slate-600">Select a deck in Settings to see Priority.</div>
-        ) : null}
+        {!deckKey ? <div className="mt-3 text-sm text-slate-600">Select a deck in Settings to see Priority.</div> : null}
 
         <div className="mt-3">
           {pLoading || cardsLoading ? (
@@ -227,14 +253,65 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Matchup preview (hardest) */}
+      <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-900">Matchup</div>
+          <button onClick={() => nav("/matchup")} className="text-xs font-medium text-blue-700 hover:text-blue-800">
+            Open →
+          </button>
+        </div>
+
+        <div className="mt-2 text-xs text-slate-500">last={last} · hardest 5 cards</div>
+
+        {mErr ? (
+          <div className="mt-3">
+            <ApiErrorPanel detail={mErr} />
+          </div>
+        ) : null}
+
+        {!deckKey ? <div className="mt-3 text-sm text-slate-600">Select a deck in Settings to see Matchup.</div> : null}
+
+        <div className="mt-3">
+          {mLoading || cardsLoading ? (
+            <div className="text-sm text-slate-500">Loading...</div>
+          ) : matchupTop.length === 0 && deckKey ? (
+            <div className="text-sm text-slate-600">No matchup data.</div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {matchupTop.map((c) => {
+                const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+                const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+
+                return (
+                  <div key={`${c.card_id}:${c.slot_kind}`} className="shrink-0">
+                    <div className="h-14 w-14 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      {icon ? (
+                        <img
+                          src={icon}
+                          alt={name}
+                          className="h-full w-full rounded-2xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center text-[10px] text-slate-500">
+                          #{c.card_id}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Trend preview */}
       <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold text-slate-900">Trend</div>
-          <button
-            onClick={() => nav("/trend")}
-            className="text-xs font-medium text-blue-700 hover:text-blue-800"
-          >
+          <button onClick={() => nav("/trend")} className="text-xs font-medium text-blue-700 hover:text-blue-800">
             Open →
           </button>
         </div>
