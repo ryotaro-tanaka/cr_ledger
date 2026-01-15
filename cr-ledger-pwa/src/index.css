@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+/* =========================================================
+   Design Tokens: Soft light base + muted blue accent
+   (matches HomePage.tsx / BottomNav.tsx styles)
+   ========================================================= */
+:root {
+  /* Background */
+  --bg: #f6f5f1;   /* warm white */
+  --bg2: #eef3fb;  /* cool highlight */
+
+  /* Surface */
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface2: rgba(255, 255, 255, 0.72);
+
+  /* Text */
+  --text: #0f172a;           /* slate-900 */
+  --muted: rgba(15, 23, 42, 0.62);
+  --muted2: rgba(15, 23, 42, 0.45);
+
+  /* Border */
+  --border: rgba(15, 23, 42, 0.10);
+  --border-strong: rgba(15, 23, 42, 0.16);
+
+  /* Accent (muted blue, not neon) */
+  --accent: #2c6faa;
+  --accent-2: #245a8b;
+  --accent-bg: rgba(44, 111, 170, 0.12);
+
+  /* Danger */
+  --danger: #b42318;
+  --danger-bg: rgba(180, 35, 24, 0.10);
+
+  /* Radius */
+  --r-xl: 18px;
+  --r-2xl: 22px;
+
+  /* Safe area */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+
+  /* Soft gradients like the reference screenshot */
+  background:
+    radial-gradient(900px 650px at 18% -12%, var(--bg2), transparent 62%),
+    radial-gradient(720px 520px at 95% 10%, rgba(44, 111, 170, 0.10), transparent 55%),
+    var(--bg);
+
+  /* Better font smoothing */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* iOS tap highlight off */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Make images behave nicely inside rounded cards */
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Optional: nicer scroll on iOS */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Optional: if you have long deck keys etc */
+pre, code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}

@@ -20,7 +20,7 @@ function RequireSelection({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="min-h-dvh bg-neutral-950 text-neutral-50">
+    <div className="min-h-dvh text-neutral-50">
       <main className="mx-auto max-w-md px-4 pb-24 pt-4">
         <Routes>
           <Route
