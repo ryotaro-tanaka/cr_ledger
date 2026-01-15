@@ -25,7 +25,7 @@ export default function TrendPage() {
 
   const { master, loading: cardsLoading, error: cardsError } = useCardMaster();
 
-  const last = 200;
+  const last = 500;
 
   useEffect(() => {
     if (!player) return;
