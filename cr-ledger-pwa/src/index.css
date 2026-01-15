@@ -42,7 +42,7 @@
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -54,6 +54,9 @@ body {
     radial-gradient(900px 650px at 18% -12%, var(--bg2), transparent 62%),
     radial-gradient(720px 520px at 95% 10%, rgba(44, 111, 170, 0.10), transparent 55%),
     var(--bg);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
 
   /* Better font smoothing */
   -webkit-font-smoothing: antialiased;
