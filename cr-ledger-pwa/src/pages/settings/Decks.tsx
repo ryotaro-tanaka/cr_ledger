@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+// src/pages/setting/Decks.tsx
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
 import { getMyDeckCards, getMyDecks, updateDeckName } from "../../api/api";
@@ -19,26 +20,38 @@ function Card({ children }: { children: ReactNode }) {
   );
 }
 
+function Spinner({ className }: { className?: string }) {
+  return (
+    <span
+      className={cx(
+        "inline-block animate-spin rounded-full border-2 border-black/20 border-t-black/70",
+        className ?? "h-4 w-4"
+      )}
+      aria-hidden="true"
+    />
+  );
+}
+
 export default function Decks() {
   const { player, deckKey, setDeckKey } = useSelection();
-
-  // card master (for thumbs)
-  const { master, loading: cardsLoading } = useCardMaster();
+  const { master } = useCardMaster();
 
   // decks
   const [dLoading, setDLoading] = useState(false);
   const [dData, setDData] = useState<MyDecksResponse | null>(null);
   const [dErr, setDErr] = useState<string | null>(null);
 
-  // deck cards (my-deck-cards)
+  // deck cards cache
   const [deckCardsMap, setDeckCardsMap] = useState<Record<string, MyDeckCardsResponse["cards"]>>({});
   const [deckCardsErrMap, setDeckCardsErrMap] = useState<Record<string, string>>({});
 
-  // rename UI state
+  // rename UI state (keep these names)
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draftName, setDraftName] = useState<string>("");
   const [renameLoadingKey, setRenameLoadingKey] = useState<string | null>(null);
   const [renameErrMap, setRenameErrMap] = useState<Record<string, string>>({});
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const reloadDecks = async (playerTag: string) => {
     setDLoading(true);
@@ -64,15 +77,19 @@ export default function Decks() {
       setDeckCardsErrMap({});
       setEditingKey(null);
       setDraftName("");
+      setRenameLoadingKey(null);
+      setRenameErrMap({});
       return;
     }
     void reloadDecks(player.player_tag);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player?.player_tag]);
 
-  // fetch deck cards for visible decks (cache in state)
+  // fetch deck cards (cache)
   useEffect(() => {
     if (!dData?.decks?.length) return;
+
+    let cancelled = false;
 
     void (async () => {
       const targets = dData.decks
@@ -81,7 +98,6 @@ export default function Decks() {
 
       if (targets.length === 0) return;
 
-      // avoid huge burst
       const limited = targets.slice(0, 30);
 
       await Promise.all(
@@ -89,24 +105,83 @@ export default function Decks() {
           try {
             const res = await getMyDeckCards(k);
             const sorted = [...res.cards].sort((a, b) => a.slot - b.slot);
-            setDeckCardsMap((prev) => ({ ...prev, [k]: sorted }));
+            if (!cancelled) setDeckCardsMap((prev) => ({ ...prev, [k]: sorted }));
           } catch (e) {
-            setDeckCardsErrMap((prev) => ({ ...prev, [k]: toErrorText(e) }));
+            if (!cancelled) setDeckCardsErrMap((prev) => ({ ...prev, [k]: toErrorText(e) }));
           }
         })
       );
     })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dData]);
 
   const playerSelected = !!player;
 
-  const anyThumbHint = useMemo(() => {
-    if (!playerSelected) return null;
-    if (cardsLoading) return "Loading card images...";
-    if (!master) return null;
-    return null;
-  }, [playerSelected, cardsLoading, master]);
+  const beginInlineEditSelected = (selectedKey: string, currentName: string) => {
+    // clear error for this deck
+    setRenameErrMap((prev) => {
+      const copy = { ...prev };
+      delete copy[selectedKey];
+      return copy;
+    });
+    setEditingKey(selectedKey);
+    setDraftName(currentName);
+
+    queueMicrotask(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  };
+
+  const cancelInlineEdit = () => {
+    if (renameLoadingKey) return;
+    setEditingKey(null);
+    setDraftName("");
+  };
+
+  const commitInlineEdit = async (selectedKey: string, currentName: string) => {
+    if (!player) return;
+    if (renameLoadingKey) return;
+
+    const next = draftName.trim();
+    if (!next) {
+      setRenameErrMap((prev) => ({ ...prev, [selectedKey]: "Deck name is required." }));
+      return;
+    }
+    if (next === currentName.trim()) {
+      cancelInlineEdit();
+      return;
+    }
+
+    setRenameLoadingKey(selectedKey);
+    setRenameErrMap((prev) => {
+      const copy = { ...prev };
+      delete copy[selectedKey];
+      return copy;
+    });
+
+    try {
+      await updateDeckName(selectedKey, next);
+      await reloadDecks(player.player_tag);
+      setEditingKey(null);
+      setDraftName("");
+    } catch (e) {
+      setRenameErrMap((prev) => ({ ...prev, [selectedKey]: toErrorText(e) }));
+    } finally {
+      setRenameLoadingKey(null);
+    }
+  };
+
+  const onRowKeyDown = (ev: React.KeyboardEvent<HTMLDivElement>, key: string) => {
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      setDeckKey(key);
+    }
+  };
 
   return (
     <Card>
@@ -129,14 +204,15 @@ export default function Decks() {
 
       <div className="mt-3 space-y-2">
         {dData?.decks.map((d) => {
-          const name = d.deck_name ?? "(no name)";
+          const currentName = d.deck_name ?? "(no name)";
           const cards = deckCardsMap[d.my_deck_key];
           const cardsErr = deckCardsErrMap[d.my_deck_key];
 
           const isSelected = deckKey === d.my_deck_key;
-          const isEditing = editingKey === d.my_deck_key;
+          const isEditingSelected = isSelected && editingKey === d.my_deck_key;
+          const isSavingSelected = isSelected && renameLoadingKey === d.my_deck_key;
 
-          const showLoadingThumbs = !!player && !cards && !cardsErr;
+          const showLoadingThumbs = playerSelected && !cards && !cardsErr;
 
           const thumbs = (cards ?? []).slice(0, 9).map((c) => {
             const icon = master?.getIconUrl(c.card_id, c.slot_kind as SlotKind) ?? null;
@@ -146,14 +222,85 @@ export default function Decks() {
           return (
             <div
               key={d.my_deck_key}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(ev) => onRowKeyDown(ev, d.my_deck_key)}
+              onClick={() => setDeckKey(d.my_deck_key)}
               className={cx(
                 "w-full rounded-2xl border px-4 py-3 shadow-sm transition",
+                "cursor-pointer select-none",
+                "focus:outline-none focus:ring-2 focus:ring-blue-200",
                 isSelected ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-white hover:bg-slate-50"
               )}
             >
               <div className="flex items-start justify-between gap-3">
-                <button type="button" onClick={() => setDeckKey(d.my_deck_key)} className="min-w-0 flex-1 text-left">
-                  <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {/* Deck name (inline edit only for selected deck) */}
+                    {!isEditingSelected ? (
+                      <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+                        {currentName}
+                      </div>
+                    ) : (
+                      <input
+                        ref={inputRef}
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          // prevent row key handling while typing
+                          e.stopPropagation();
+
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void commitInlineEdit(d.my_deck_key, currentName);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelInlineEdit();
+                          }
+                        }}
+                        disabled={isSavingSelected}
+                        className={cx(
+                          "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 outline-none",
+                          "border-slate-200 focus:border-blue-200 focus:ring-2 focus:ring-blue-100",
+                          isSavingSelected && "opacity-70"
+                        )}
+                        placeholder="Deck name"
+                        inputMode="text"
+                        autoCapitalize="sentences"
+                        autoCorrect="on"
+                      />
+                    )}
+
+                    {/* ✏️ (selected deck only) */}
+                    {isSelected ? (
+                        <button
+                            type="button"
+                            disabled={isSavingSelected}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (isEditingSelected) return;
+                                beginInlineEditSelected(d.my_deck_key, currentName);
+                            }}
+                            className={cx(
+                                "ml-1 inline-flex items-center",
+                                "text-slate-400",
+                                "hover:text-slate-600",
+                                "active:text-slate-700",
+                                isSavingSelected && "opacity-60"
+                            )}
+                            aria-label="Rename deck"
+                            title="Rename"
+                            >
+                            {isSavingSelected ? (
+                                <Spinner className="h-3.5 w-3.5" />
+                            ) : (
+                                <span className="text-sm leading-none">✏️</span>
+                            )}
+                        </button>
+                    ) : null}
+                  </div>
 
                   {/* 9 tiny icons */}
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -169,6 +316,7 @@ export default function Decks() {
                           key={`${c.slot}:${c.card_id}:${c.slot_kind}`}
                           className="h-7 w-7 overflow-hidden rounded-lg border border-slate-200 bg-white"
                           title={`${c.slot_kind} #${c.card_id}`}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {c.icon ? (
                             <img src={c.icon} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -179,110 +327,29 @@ export default function Decks() {
                       ))
                     )}
                   </div>
-                </button>
 
-                <div className="shrink-0 text-right">
-                  <div className="text-[10px] text-slate-500">battles</div>
-                  <div className="text-sm font-semibold text-slate-900">{d.battles}</div>
+                  {/* edit hint */}
+                  {isEditingSelected ? (
+                    <div className="mt-2 text-[11px] text-slate-500">Enter: save / Esc: cancel</div>
+                  ) : null}
 
-                  <div className="mt-2 flex justify-end gap-2">
-                    {!isEditing ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingKey(d.my_deck_key);
-                          setDraftName(name);
-                          setRenameErrMap((prev) => {
-                            const copy = { ...prev };
-                            delete copy[d.my_deck_key];
-                            return copy;
-                          });
-                        }}
-                        className="text-xs font-semibold text-blue-700 hover:text-blue-800"
-                      >
-                        Rename
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              {/* Rename editor (existing UI; you’ll swap to ✏️ inline later) */}
-              {isEditing ? (
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
-                  <div className="text-xs font-semibold text-slate-700">Rename deck</div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <input
-                      value={draftName}
-                      onChange={(e) => setDraftName(e.target.value)}
-                      placeholder="Deck name"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-200 focus:ring-2 focus:ring-blue-100"
-                    />
-                    <button
-                      type="button"
-                      disabled={renameLoadingKey === d.my_deck_key}
-                      onClick={() => {
-                        const next = draftName.trim();
-                        if (!next) {
-                          setRenameErrMap((prev) => ({ ...prev, [d.my_deck_key]: "Deck name is required." }));
-                          return;
-                        }
-                        if (!player) return;
-
-                        void (async () => {
-                          setRenameLoadingKey(d.my_deck_key);
-                          setRenameErrMap((prev) => {
-                            const copy = { ...prev };
-                            delete copy[d.my_deck_key];
-                            return copy;
-                          });
-
-                          try {
-                            await updateDeckName(d.my_deck_key, next);
-                            await reloadDecks(player.player_tag);
-                            setEditingKey(null);
-                            setDraftName("");
-                          } catch (e) {
-                            setRenameErrMap((prev) => ({ ...prev, [d.my_deck_key]: toErrorText(e) }));
-                          } finally {
-                            setRenameLoadingKey(null);
-                          }
-                        })();
-                      }}
-                      className={cx(
-                        "shrink-0 rounded-xl px-3 py-2 text-sm font-semibold shadow-sm transition active:scale-[0.99]",
-                        renameLoadingKey === d.my_deck_key ? "bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"
-                      )}
-                    >
-                      {renameLoadingKey === d.my_deck_key ? "Saving..." : "Save"}
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={renameLoadingKey === d.my_deck_key}
-                      onClick={() => {
-                        setEditingKey(null);
-                        setDraftName("");
-                      }}
-                      className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 active:scale-[0.99]"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
-                  {renameErrMap[d.my_deck_key] ? (
-                    <div className="mt-3">
+                  {/* rename error (selected deck only) */}
+                  {isSelected && renameErrMap[d.my_deck_key] ? (
+                    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
                       <ApiErrorPanel title="Rename error" detail={renameErrMap[d.my_deck_key]} />
                     </div>
                   ) : null}
                 </div>
-              ) : null}
+
+                <div className="shrink-0 text-right">
+                  <div className="text-[10px] text-slate-500">battles</div>
+                  <div className="text-sm font-semibold text-slate-900">{d.battles}</div>
+                </div>
+              </div>
             </div>
           );
         })}
       </div>
-
-      {anyThumbHint ? <div className="mt-3 text-xs text-slate-500">{anyThumbHint}</div> : null}
     </Card>
   );
 }
