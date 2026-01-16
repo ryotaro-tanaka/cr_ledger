@@ -47,7 +47,7 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
   return u.toString();
 }
 
-async function request<T>(path: string, opts?: { method?: "GET" | "POST"; params?: Record<string, any>; body?: any }): Promise<T> {
+async function request<T>(path: string, opts?: { method?: "GET" | "POST" | "PATCH"; params?: Record<string, any>; body?: any }): Promise<T> {
   requireEnv();
   const url = buildUrl(path, opts?.params);
 
@@ -118,5 +118,12 @@ export function getCards(opts?: { nocache?: boolean }): Promise<RoyaleApiCardsRe
 export function getMyDeckCards(myDeckKey: string): Promise<MyDeckCardsResponse> {
   return request<MyDeckCardsResponse>("/api/my-deck-cards", {
     params: { my_deck_key: myDeckKey },
+  });
+}
+
+export function updateDeckName(myDeckKey: string, deckName: string): Promise<{ ok: true }> {
+  return request<{ ok: true }>("/api/my-decks/name", {
+    method: "PATCH",
+    body: { my_deck_key: myDeckKey, deck_name: deckName },
   });
 }
