@@ -1,24 +1,13 @@
 // src/pages/setting/Decks.tsx
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
 import { getMyDeckCards, getMyDecks, updateDeckName } from "../../api/api";
 import type { MyDeckCardsResponse, MyDecksResponse, SlotKind } from "../../api/types";
 import { toErrorText } from "../../lib/errors";
 import { useSelection } from "../../lib/selection";
 import { useCardMaster } from "../../cards/useCardMaster";
-
-function cx(...xs: Array<string | false | undefined | null>) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-      {children}
-    </div>
-  );
-}
+import { cx } from "../../lib/cx";
+import SectionCard from "../../components/SectionCard";
 
 function Spinner({ className }: { className?: string }) {
   return (
@@ -184,7 +173,7 @@ export default function Decks() {
   };
 
   return (
-    <Card>
+    <SectionCard>
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold text-slate-900">Decks</div>
         {dLoading ? <div className="text-xs text-slate-500">Loading...</div> : null}
@@ -350,6 +339,6 @@ export default function Decks() {
           );
         })}
       </div>
-    </Card>
+    </SectionCard>
   );
 }

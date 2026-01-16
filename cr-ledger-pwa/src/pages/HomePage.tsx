@@ -1,22 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { sync, getPriority, getMatchupByCard, getOpponentTrendLast } from "../api/api";
+import { cx } from "../lib/cx";
 import type {
   PriorityResponse,
   MatchupByCardResponse,
   OpponentTrendResponse,
   SyncResponse,
+  SlotKind,
 } from "../api/types";
 import { useSelection } from "../lib/selection";
 import { toErrorText } from "../lib/errors";
 import { useCardMaster } from "../cards/useCardMaster";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 
-type Thumb = { card_id: number; slot_kind: "normal" | "evolution" | "hero" | "support" };
-
-function cx(...xs: Array<string | false | undefined | null>) {
-  return xs.filter(Boolean).join(" ");
-}
+type Thumb = { card_id: number; slot_kind: SlotKind };
 
 export default function HomePage() {
   const nav = useNavigate();

@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
+import { cx } from "../lib/cx";
 
 type Metric = { label: string; value: string; strong?: boolean };
-
-function cx(...xs: Array<string | false | undefined | null>) {
-  return xs.filter(Boolean).join(" ");
-}
 
 export default function CardRow(props: {
   iconUrl?: string | null;

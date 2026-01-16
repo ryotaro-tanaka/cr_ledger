@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ReactNode } from "react";
+import SectionCard from "../../components/SectionCard";
 
 function isStandalonePWA(): boolean {
   const mql = window.matchMedia?.("(display-mode: standalone)");
@@ -57,14 +57,6 @@ function getInstallHint(): InstallHint {
   };
 }
 
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-      {children}
-    </div>
-  );
-}
-
 export default function InstallGuide() {
   const standalone = isStandalonePWA();
   const installHint = useMemo(() => getInstallHint(), []);
@@ -72,7 +64,7 @@ export default function InstallGuide() {
   if (standalone) return null;
 
   return (
-    <Card>
+    <SectionCard>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-slate-900">{installHint.title}</div>
@@ -99,6 +91,6 @@ export default function InstallGuide() {
       </div>
 
       <div className="mt-3 text-xs text-slate-600">Note: {installHint.note}</div>
-    </Card>
+    </SectionCard>
   );
 }

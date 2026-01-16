@@ -1,24 +1,13 @@
-import type { ReactNode } from "react";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
 import { useCardMaster } from "../../cards/useCardMaster";
-
-function cx(...xs: Array<string | false | undefined | null>) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-      {children}
-    </div>
-  );
-}
+import { cx } from "../../lib/cx";
+import SectionCard from "../../components/SectionCard";
 
 export default function CardsRefresh() {
   const { refresh, loading, error } = useCardMaster();
 
   return (
-    <Card>
+    <SectionCard>
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-slate-900">Cards</div>
@@ -44,6 +33,6 @@ export default function CardsRefresh() {
           <ApiErrorPanel title="Cards refresh error" detail={error} />
         </div>
       ) : null}
-    </Card>
+    </SectionCard>
   );
 }

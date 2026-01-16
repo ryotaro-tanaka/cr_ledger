@@ -1,22 +1,11 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
 import { getPlayers } from "../../api/api";
 import type { PlayersResponse } from "../../api/types";
 import { toErrorText } from "../../lib/errors";
 import { useSelection } from "../../lib/selection";
-
-function cx(...xs: Array<string | false | undefined | null>) {
-  return xs.filter(Boolean).join(" ");
-}
-
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-      {children}
-    </div>
-  );
-}
+import { cx } from "../../lib/cx";
+import SectionCard from "../../components/SectionCard";
 
 export default function Players() {
   const { player, setPlayer, clearDeckKey } = useSelection();
@@ -35,7 +24,8 @@ export default function Players() {
         const res = await getPlayers();
         if (!cancelled) setData(res);
       } catch (e) {
-        if (!cancelled) setError(toErrorText(e));
+        if (!cancelled) return;
+        setError(toErrorText(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,7 +37,7 @@ export default function Players() {
   }, []);
 
   return (
-    <Card>
+    <SectionCard>
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold text-slate-900">Players</div>
         {loading ? <div className="text-xs text-slate-500">Loading...</div> : null}
@@ -79,6 +69,6 @@ export default function Players() {
           </button>
         ))}
       </div>
-    </Card>
+    </SectionCard>
   );
 }

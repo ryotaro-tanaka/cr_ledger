@@ -1,14 +1,6 @@
-import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelection } from "../../lib/selection";
-
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-      {children}
-    </div>
-  );
-}
+import SectionCard from "../../components/SectionCard";
 
 export default function Selected() {
   const nav = useNavigate();
@@ -23,7 +15,7 @@ export default function Selected() {
   })();
 
   return (
-    <Card>
+    <SectionCard>
       <div className="text-sm font-semibold text-slate-900">Selected</div>
       <div className="mt-1 text-xs text-slate-500">{hint}</div>
 
@@ -56,6 +48,6 @@ export default function Selected() {
           Clear all
         </button>
       </div>
-    </Card>
+    </SectionCard>
   );
 }
