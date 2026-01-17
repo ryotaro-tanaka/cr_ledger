@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionCard from "../../components/SectionCard";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
-import { cx } from "../../lib/cx";
 import { useCardMaster } from "../../cards/useCardMaster";
 import type { Thumb } from "./thumbs";
 
@@ -92,32 +91,25 @@ export default function PreviewCard<T>({
         ) : thumbs.length === 0 ? (
             <div className="text-sm text-slate-600">{emptyText}</div>
         ) : (
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="flex gap-1 overflow-x-auto pb-1">
             {thumbs.map((c) => {
                 const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
                 const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
-
                 return (
-                <div key={`${c.card_id}:${c.slot_kind}`} className="shrink-0">
-                    <div
-                    className={cx(
-                        "h-14 w-14 rounded-2xl border border-slate-200 bg-white shadow-sm"
-                    )}
-                    >
-                    {icon ? (
-                        <img
-                        src={icon}
-                        alt={name}
-                        className="h-full w-full rounded-2xl object-cover"
-                        loading="lazy"
-                        />
-                    ) : (
-                        <div className="grid h-full w-full place-items-center text-[10px] text-slate-500">
-                        #{c.card_id}
-                        </div>
-                    )}
+                    <div key={`${c.card_id}:${c.slot_kind}`} className="shrink-0">
+                        {icon ? (
+                            <img
+                                src={icon}
+                                alt={name}
+                                className="h-14 w-14 object-contain"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <div className="flex h-14 w-14 items-center justify-center text-[10px] text-slate-400">
+                                #{c.card_id}
+                            </div>
+                        )}
                     </div>
-                </div>
                 );
             })}
             </div>
