@@ -82,7 +82,6 @@ export default function MatchupPage() {
               iconUrl={icon}
               title={name}
               subtitle={mc.slot_kind}
-              badge={isSmallSample ? "small sample" : undefined}
               tone={isSmallSample ? "warn" : "default"}
               metrics={[
                 { label: "win", value: pct01(mc.win_rate), strong: true },
@@ -96,8 +95,9 @@ export default function MatchupPage() {
                   <div className="text-right">{num(mc.losses)}</div>
 
                   {isSmallSample ? (
-                    <div className="col-span-2 mt-1 text-[11px] text-slate-500">
-                      Small sample: results may be unstable.
+                    <div className="col-span-2 mt-1 text-[11px]">
+                      <span className="font-semibold text-amber-900">Small sample:</span>{" "}
+                      <span className="text-slate-600">results may be unreliable.</span>
                     </div>
                   ) : null}
                 </div>

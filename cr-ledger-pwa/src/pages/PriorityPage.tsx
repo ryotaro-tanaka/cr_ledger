@@ -82,7 +82,6 @@ export default function PriorityPage() {
               iconUrl={icon}
               title={name}
               subtitle={pc.slot_kind}
-              badge={isSmallSample ? "small sample" : undefined}
               tone={isSmallSample ? "warn" : "default"}
               metrics={[
                 { label: "priority", value: pc.priority_score.toFixed(3), strong: true },
@@ -95,8 +94,9 @@ export default function PriorityPage() {
                   <div className="text-right">{num(pc.deck_battles_with_card)}</div>
 
                   {isSmallSample ? (
-                    <div className="col-span-2 mt-1 text-[11px] text-slate-500">
-                      Small sample: priority may be noisy.
+                    <div className="col-span-2 mt-1 text-[11px]">
+                      <span className="font-semibold text-amber-900">Small sample:</span>{" "}
+                      <span className="text-slate-600">results may be unreliable.</span>
                     </div>
                   ) : null}
                 </div>
