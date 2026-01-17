@@ -32,8 +32,6 @@ export default function SettingsPage() {
       <Players />
       <Decks />
       <CardsRefresh />
-
-      <div style={{ height: "calc(92px + var(--safe-bottom))" }} />
     </section>
   );
 }

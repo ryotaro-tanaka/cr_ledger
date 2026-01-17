@@ -95,8 +95,6 @@ export default function TrendPage() {
         <div ref={sentinelRef} />
         {hasMore ? <div className="py-2 text-center text-xs text-slate-500">Loading more…</div> : null}
       </div>
-
-      <div style={{ height: "calc(92px + var(--safe-bottom))" }} />
     </section>
   );
 }

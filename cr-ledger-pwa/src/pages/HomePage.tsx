@@ -99,8 +99,6 @@ export default function HomePage() {
           }))
         }
       />
-
-      <div style={{ height: "calc(92px + var(--safe-bottom))" }} />
     </section>
   );
 }
