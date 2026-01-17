@@ -50,10 +50,15 @@ body {
   color: var(--text);
 
   /* Soft gradients like the reference screenshot */
-  background:
+  /* background:
     radial-gradient(900px 650px at 18% -12%, var(--bg2), transparent 62%),
     radial-gradient(720px 520px at 95% 10%, rgba(44, 111, 170, 0.10), transparent 55%),
+    var(--bg); */
+  background:
+    radial-gradient(900px 650px at 18% 30%, var(--bg2), transparent 30%),
+    radial-gradient(720px 520px at 95% 50%, rgba(44,111,170,.10), transparent 50%),
     var(--bg);
+
   background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
