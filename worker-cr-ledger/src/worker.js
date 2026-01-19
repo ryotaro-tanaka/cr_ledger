@@ -332,4 +332,15 @@ export default {
       });
     });
   },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      const { players } = await listPlayers(env);
+
+      for (const p of players) {
+        const tagDb = p.player_tag;
+        const tagApi = `#${tagDb}`;
+        await syncCore(env, tagApi);
+      }
+    })());
+  },
 };
