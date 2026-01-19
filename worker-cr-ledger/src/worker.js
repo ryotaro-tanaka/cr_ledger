@@ -249,16 +249,16 @@ async function handleCards(req, env) {
     supportItems: Array.isArray(data?.supportItems) ? data.supportItems : [],
   };
 
-  const res = json(payload, 200);
+  // Cache-Control は最初から付けておく（後からいじると clone のタイミングで事故りやすい）
+  const res = json(payload, 200, { "Cache-Control": "public, max-age=43200" });
 
   if (!bypass) {
-    const resForCache = new Response(res.body, res);
-    resForCache.headers.set("Cache-Control", "public, max-age=43200");
-    await cache.put(cacheKey, resForCache.clone());
+    await cache.put(cacheKey, res.clone());
   }
 
   return res;
 }
+
 
 function normalizeDeckNameAllowClear(v) {
   // undefined/null はエラーにしたいならここで分ける
