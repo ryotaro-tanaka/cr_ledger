@@ -1,135 +1,120 @@
 # CR_ledger
 
-CR_ledger は、Clash Royale において  
-**特定プレイヤー個人のバトルログを継続的に蓄積し、  
-その人自身のオリジナルデッキを最適化・ブラッシュアップすること**  
-に特化した分析アプリです。
+CR_ledger is an analytics application focused on Clash Royale that continuously collects an individual player's battlelog to help optimize and refine that player's original deck.
 
-**デモページ:** https://cr-ledger.pages.dev/  
-ブラウザで動作・UIをすぐに確認できます。フィードバックは issue でお願いします。
+**Demo page:** https://cr-ledger.pages.dev/  
+Open the demo in a browser to quickly check behavior and UI. Please report feedback or bugs via issues.
 
 ---
 
-## コンセプト
+## Concept
 
-CR_ledger は、次のような思想に基づいて設計されています。
+CR_ledger is designed with the following principles in mind:
 
-- 一般論・環境Tierよりも **個人の実戦データ** を最優先する
-- サンプル数が少ない前提で、**断定せず検討材料を提示**する
-- プレイングではなく **デッキ構成の改善** にフォーカスする
-- テンプレデッキではなく **オリジナルデッキを極める** ことを支援する
+- Prioritize an individual player's real match data over general theory or meta tiers
+- Present findings as materials for consideration rather than definitive claims when sample sizes are small
+- Focus on improving deck composition rather than play-by-play actions
+- Support mastering an original deck rather than promoting template lineups
 
-「何を入れ替えるべきか」を決めるためではなく、  
-**「何を考えるべきか」を明確にするためのツール**です。
-
----
-
-## できること
-
-CR_ledger では、特定プレイヤーの battlelog を蓄積し、以下のような分析を行います。
-
-- 対戦相手カード・デッキのトレンド可視化  
-- デッキ別の勝率・直近勝率の比較  
-- 特定カードに対する条件付き勝率の算出  
-- カード組み合わせ単位での苦手構成分析（共起分析）  
-- デッキ改善フェーズを判断するための総評・弱点・改善候補の提示  
-
-これらはすべて  
-**「なぜ負けているのか」「どこに構造的な弱点があるのか」**  
-を考えるための補助情報として提供されます。
+This tool is intended not to decide "what to swap" for you, but to clarify "what to think about."
 
 ---
 
-## 既存アプリとの違い
+## What it does
 
-CR_ledger は、Stats Royale / DeckShop Pro / deckai などの  
-一般的な分析・デッキ紹介アプリとは目的が異なります。
+CR_ledger collects a specific player's battlelog and provides the following analyses:
 
-- 特定プレイヤーの battlelog を **長期で蓄積**できる
-- 一般的に強いデッキではなく **個人最適** を重視
-- テンプレ紹介ではなく **オリジナルデッキ前提**
-- プレイング分析ではなく **デッキ構成改善に特化**
-- 統計的断定ではなく **意思決定支援** を目的とする
+- Visualization of opponent card and deck trends
+- Comparison of win rates by deck and recent win rates
+- Conditional win rate calculations for specific cards
+- Co-occurrence analysis to find troublesome card combinations
+- Overall assessment, weaknesses, and candidate improvements to guide deck improvement phases
+
+All outputs are provided as supporting information to help answer "why am I losing" and "where are the structural weaknesses."
 
 ---
 
-## リポジトリ構成
+## Differences from existing apps
 
-このリポジトリには、バックエンドとフロントエンドの両方が含まれています。
+CR_ledger differs from general analysis and deck sites (e.g., Stats Royale, DeckShop Pro, deckai) in these ways:
+
+- Long-term accumulation of a single player's battlelog
+- Emphasis on personal optimization over universally strong decks
+- Assumes original deck use rather than template promotion
+- Focused on deck composition improvement rather than play analysis
+- Intended as decision-support rather than statistical proclamation
+
+---
+
+## Repository layout
+
+This repository contains both backend and frontend code.
 
 /
-├─ backend/      # API / 分析ロジック
+├─ backend/      # API / analysis logic
 ├─ frontend/     # Web UI
-└─ docs/         # 設計・仕様ドキュメント（予定）
+└─ docs/         # Design and specification documents
 
 ---
 
-## 技術スタック（概要）
+## Tech stack (overview)
 
-- Frontend: （例）React
+- Frontend: (example) React
 - Backend: Cloudflare Workers
-- Database: Cloudflare D1（SQLite）
+- Database: Cloudflare D1 (SQLite)
 
-※ 本リポジトリには **DBスキーマや実データは含まれていません**。
+*This repository does not include DB schema files or real data.*
 
 ---
 
-## データについて
+## Data
 
-CR_ledger は Clash Royale 公式 API の battlelog を唯一のデータソースとしています。
+CR_ledger uses the Clash Royale official API's battlelog as its sole data source.
 
-- カード配置・タイミング・操作ログは扱いません
-- 分析はすべて battlelog 由来の情報に基づきます
-- DB が必須であり、DB が存在しない状態ではアプリは動作しません
+- It does not handle card placement, timing, or input logs
+- All analyses are based solely on battlelog-derived information
+- A database is required; the app will not function without one
 
-## DBドキュメント
+## DB documentation
 
-DB 設計の詳細は以下にまとめています（Cloudflare D1 / SQLite）。
+Database design details are documented below (Cloudflare D1 / SQLite):
 
 - [docs/db/schema.md](docs/db/schema.md)  
-  テーブル定義・カラムの意味・制約・インデックスの解説（このファイルが主）。  
-  ※ PRAGMA の出力結果（table_info / foreign_key_list / index_list）はこの末尾に追記します。
+  Table definitions, column meanings, constraints, and index explanations (primary documentation).  
+  NOTE: PRAGMA outputs (table_info / foreign_key_list / index_list) will be appended to the end of this file.
 
 - [docs/db/schema.er.md](docs/db/schema.er.md)  
-  Mermaid による ER 図（全体把握用）。
+  ER diagram rendered with Mermaid for an overall view.
 
 - [docs/db/notes.md](docs/db/notes.md)  
-  設計思想・割り切り・「あえてやらないこと」のメモ。
+  Design rationale, trade-offs, and "intentional omissions" notes.
 
 ---
 
-## セットアップ（概要）
+## Setup (summary)
 
-このアプリを動作させるには、以下が必要です。
+To run this application you will need:
 
-- Cloudflare Workers 実行環境
-- Cloudflare D1 データベース
-- Clash Royale API のアクセストークン
+- A Cloudflare Workers execution environment
+- A Cloudflare D1 database
+- A Clash Royale API access token
 
-具体的なセットアップ手順は `docs/` に記載予定です。
-
----
-
-## 対象ユーザ
-
-CR_ledger は、次のようなプレイヤーを想定しています。
-
-- テンプレデッキより自分のデッキを使いたい人
-- 勝敗の原因を感覚ではなくデータで振り返りたい人
-- デッキ構成の改善にじっくり取り組みたい人
-- 一般論より「自分にとってどうか」を重視したい人
+Detailed setup steps will be documented under `docs/`.
 
 ---
 
-## デモ
+## Intended users
 
-デモページを公開しています：  
-https://cr-ledger.pages.dev/  
+CR_ledger is aimed at players who:
 
-ブラウザで動作や UI を確認できます。フィードバックや不具合は issue で報告してください。
+- Prefer using their own deck over template decks
+- Want to master a single deck in depth
+- Wish to review wins and losses using data rather than intuition
+- Are focused on improving deck composition thoughtfully
+- Value "what works for me" over general meta advice
 
 ---
 
-## ライセンス
+## License
 
 TBD
