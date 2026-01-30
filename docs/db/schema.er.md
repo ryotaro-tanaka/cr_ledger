@@ -74,3 +74,8 @@ erDiagram
   battles }o--|| my_decks : uses
 
 ```
+<!-- ER diagram rendered with Mermaid for an overall view -->
+
+<!-- Note: The card_trait_kv table was updated to include an optional integer trait_value (0-100),
+composite primary key (card_id, slot_kind, trait_key), and a foreign key on trait_key -> trait_keys.
+Please refer to docs/db/schema.md for the current DDL details. -->

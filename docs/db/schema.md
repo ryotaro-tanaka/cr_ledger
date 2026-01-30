@@ -113,10 +113,20 @@ CR_ledger は Clash Royale 公式 API の battlelog（Ranked / Trophy）を元�
 
 | column | type | note |
 |------|------|------|
-| card_id | INTEGER PK | 論理的に card_traits |
-| slot_kind | TEXT PK | all / normal / evolution / hero / support |
-| trait_key | TEXT PK | trait_keys 参照 |
-| trait_value | TEXT | 任意の値 |
+| card_id | INTEGER | 論理的に card_traits |
+| slot_kind | TEXT | all / normal / evolution / hero / support（デフォルト 'all'） |
+| trait_key | TEXT | trait_keys 参照 |
+| trait_value | INTEGER NULL | 任意の強度/値（0–100）。NULL は存在のみを示す |
+
+主キーおよび制約・参照：
+- PRIMARY KEY (card_id, slot_kind, trait_key)
+- FOREIGN KEY (trait_key) REFERENCES trait_keys(trait_key)
+- CHECK による slot_kind 制約と trait_value の範囲制約を想定
+
+インデックス（実用的最小限）：
+- idx_ctkv_card ON card_trait_kv(card_id)
+- idx_ctkv_slot_kind ON card_trait_kv(slot_kind)
+- idx_ctkv_trait_kind ON card_trait_kv(trait_key, slot_kind)
 
 ---
 
