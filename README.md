@@ -50,10 +50,12 @@ CR_ledger differs from general analysis and deck sites (e.g., Stats Royale, Deck
 
 This repository contains both backend and frontend code.
 
+```
 /
-├─ backend/      # API / analysis logic
-├─ frontend/     # Web UI
-└─ docs/         # Design and specification documents
+├─ worker-cr-ledger/  # API / analysis logic
+├─ cr-ledger-pwa/     # Web UI
+└─ docs/              # Design and specification documents
+```
 
 ---
 

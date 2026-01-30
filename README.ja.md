@@ -57,10 +57,12 @@ CR_ledger は、Stats Royale / DeckShop Pro / deckai などの
 
 このリポジトリには、バックエンドとフロントエンドの両方が含まれています。
 
+```
 /
-├─ backend/      # API / 分析ロジック
-├─ frontend/     # Web UI
-└─ docs/         # 設計・仕様ドキュメント（予定）
+├─ worker-cr-ledger/  # API / analysis logic
+├─ cr-ledger-pwa/     # Web UI
+└─ docs/              # Design and specification documents
+```
 
 ---
 
