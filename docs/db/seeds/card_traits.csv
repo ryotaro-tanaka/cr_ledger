@@ -1,0 +1,126 @@
+card_id,card_name,card_type,is_air,can_damage_air,primary_target_buildings,is_aoe,is_swarm_like
+26000000,Knight,unit,0,0,0,0,0
+26000001,Archers,unit,0,1,0,0,0
+26000002,Goblins,unit,0,0,0,0,1
+26000003,Giant,unit,0,0,1,0,0
+26000004,P.E.K.K.A,unit,0,0,0,0,0
+26000005,Minions,unit,1,1,0,0,1
+26000006,Balloon,unit,1,1,1,1,0
+26000007,Witch,unit,0,1,0,1,1
+26000008,Barbarians,unit,0,0,0,0,1
+26000009,Golem,unit,0,1,1,1,0
+26000010,Skeletons,unit,0,0,0,0,1
+26000011,Valkyrie,unit,0,0,0,1,0
+26000012,Skeleton Army,unit,0,0,0,0,1
+26000013,Bomber,unit,0,0,0,1,0
+26000014,Musketeer,unit,0,1,0,0,0
+26000015,Baby Dragon,unit,1,1,0,1,0
+26000016,Prince,unit,0,0,0,0,0
+26000017,Wizard,unit,0,1,0,1,0
+26000018,Mini P.E.K.K.A,unit,0,0,0,0,0
+26000019,Spear Goblins,unit,0,1,0,0,1
+26000020,Giant Skeleton,unit,0,1,0,1,0
+26000021,Hog Rider,unit,0,0,1,0,0
+26000022,Minion Horde,unit,1,1,0,0,1
+26000023,Ice Wizard,unit,0,1,0,1,0
+26000024,Royal Giant,unit,0,0,1,0,0
+26000025,Guards,unit,0,0,0,0,1
+26000026,Princess,unit,0,1,0,1,0
+26000027,Dark Prince,unit,0,0,0,1,0
+26000028,Three Musketeers,unit,0,1,0,0,1
+26000029,Lava Hound,unit,1,0,1,0,1
+26000030,Ice Spirit,unit,0,1,0,1,0
+26000031,Fire Spirit,unit,0,1,0,1,0
+26000032,Miner,unit,0,0,0,0,0
+26000033,Sparky,unit,0,0,0,1,0
+26000034,Bowler,unit,0,0,0,1,0
+26000035,Lumberjack,unit,0,1,0,1,0
+26000036,Battle Ram,unit,0,0,1,0,0
+26000037,Inferno Dragon,unit,1,1,0,0,0
+26000038,Ice Golem,unit,0,1,1,1,0
+26000039,Mega Minion,unit,1,1,0,0,0
+26000040,Dart Goblin,unit,0,1,0,0,0
+26000041,Goblin Gang,unit,0,1,0,0,1
+26000042,Electro Wizard,unit,0,1,0,0,0
+26000043,Elite Barbarians,unit,0,0,0,0,0
+26000044,Hunter,unit,0,1,0,1,0
+26000045,Executioner,unit,0,1,0,1,0
+26000046,Bandit,unit,0,0,0,0,0
+26000047,Royal Recruits,unit,0,0,0,0,1
+26000048,Night Witch,unit,1,1,0,0,1
+26000049,Bats,unit,1,1,0,0,1
+26000050,Royal Ghost,unit,0,0,0,1,0
+26000051,Ram Rider,unit,0,1,1,0,0
+26000052,Zappies,unit,0,1,0,0,1
+26000053,Rascals,unit,0,1,0,0,1
+26000054,Cannon Cart,unit,0,0,0,0,0
+26000055,Mega Knight,unit,0,0,0,1,0
+26000056,Skeleton Barrel,unit,1,1,1,0,1
+26000057,Flying Machine,unit,1,1,0,0,0
+26000058,Wall Breakers,unit,0,1,1,1,0
+26000059,Royal Hogs,unit,0,0,1,0,1
+26000060,Goblin Giant,unit,0,1,1,0,0
+26000061,Fisherman,unit,0,0,0,0,0
+26000062,Magic Archer,unit,0,1,0,1,0
+26000063,Electro Dragon,unit,1,1,0,0,0
+26000064,Firecracker,unit,0,1,0,1,0
+26000065,Mighty Miner,unit,0,1,0,1,0
+26000067,Elixir Golem,unit,0,0,1,0,0
+26000068,Battle Healer,unit,0,0,0,0,0
+26000069,Skeleton King,unit,0,0,0,1,1
+26000072,Archer Queen,unit,0,1,0,0,0
+26000074,Golden Knight,unit,0,0,0,1,0
+26000077,Monk,unit,0,1,0,0,0
+26000080,Skeleton Dragons,unit,1,1,0,1,0
+26000083,Mother Witch,unit,0,1,0,0,0
+26000084,Electro Spirit,unit,0,1,0,1,0
+26000085,Electro Giant,unit,0,1,1,1,0
+26000087,Phoenix,unit,1,1,0,1,0
+26000093,Little Prince,unit,0,1,0,0,0
+26000095,Goblin Demolisher,unit,0,1,0,1,0
+26000096,Goblin Machine,unit,0,1,0,1,0
+26000097,Suspicious Bush,unit,0,0,1,0,0
+26000099,Goblinstein,unit,0,1,1,1,0
+26000101,Rune Giant,unit,0,0,1,0,0
+26000102,Berserker,unit,0,0,0,0,0
+26000103,Boss Bandit,unit,0,0,0,0,0
+27000000,Cannon,building,0,0,0,0,0
+27000001,Goblin Hut,building,0,1,0,0,1
+27000002,Mortar,building,0,0,0,1,0
+27000003,Inferno Tower,building,0,1,0,0,0
+27000004,Bomb Tower,building,0,0,0,1,0
+27000005,Barbarian Hut,building,0,0,0,0,1
+27000006,Tesla,building,0,1,0,0,0
+27000007,Elixir Collector,building,0,0,0,0,0
+27000008,X-Bow,building,0,0,0,0,0
+27000009,Tombstone,building,0,0,0,0,1
+27000010,Furnace,unit,0,1,0,1,0
+27000012,Goblin Cage,building,0,0,0,0,0
+27000013,Goblin Drill,building,0,0,1,0,1
+28000000,Fireball,spell,0,1,0,1,0
+28000001,Arrows,spell,0,1,0,1,0
+28000002,Rage,spell,0,1,0,1,0
+28000003,Rocket,spell,0,1,1,1,0
+28000004,Goblin Barrel,unit,0,0,1,0,1
+28000005,Freeze,spell,0,1,0,1,0
+28000006,Mirror,spell,0,0,0,0,0
+28000007,Lightning,spell,0,1,0,1,0
+28000008,Zap,spell,0,1,0,1,0
+28000009,Poison,spell,0,1,0,1,0
+28000010,Graveyard,unit,0,0,0,0,1
+28000011,The Log,unit,0,0,0,1,0
+28000012,Tornado,spell,0,1,0,1,0
+28000013,Clone,spell,0,0,0,0,0
+28000014,Earthquake,spell,0,0,1,1,0
+28000015,Barbarian Barrel,spell,0,0,0,1,0
+28000016,Heal Spirit,unit,0,1,0,1,0
+28000017,Giant Snowball,spell,0,1,0,1,0
+28000018,Royal Delivery,spell,0,1,0,1,0
+28000023,Void,spell,0,1,0,1,0
+28000024,Goblin Curse,spell,0,1,0,1,0
+28000025,Spirit Empress,unit,1,1,0,0,0
+28000026,Vines,spell,0,1,0,1,0
+159000000,Tower Princess,support,0,1,0,0,0
+159000001,Cannoneer,support,0,1,0,0,0
+159000002,Dagger Duchess,support,0,1,0,0,0
+159000004,Royal Chef,support,0,1,0,0,0
