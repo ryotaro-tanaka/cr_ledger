@@ -55,20 +55,17 @@ export async function upsertMyDeckCardsAsFetched(env, myDeckKey, myCards, mySupp
 /**
  * battles: battle_id 主キーで冪等保存
  */
-export async function upsertBattle(env, battleId, playerTagDb, battleTime, result, myDeckKey, arenaId, gameModeId) {
+export async function upsertBattle(env, battleId, playerTagDb, battleTime, result, myDeckKey) {
   await env.DB.prepare(`
     INSERT INTO battles (
-      battle_id, player_tag, battle_time, result, my_deck_key,
-      arena_id, game_mode_id
+      battle_id, player_tag, battle_time, result, my_deck_key
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(battle_id) DO UPDATE SET
       result = excluded.result,
-      my_deck_key = excluded.my_deck_key,
-      arena_id = excluded.arena_id,
-      game_mode_id = excluded.game_mode_id
+      my_deck_key = excluded.my_deck_key
   `).bind(
-    battleId, playerTagDb, battleTime, result, myDeckKey, arenaId, gameModeId
+    battleId, playerTagDb, battleTime, result, myDeckKey
   ).run();
 }
 
