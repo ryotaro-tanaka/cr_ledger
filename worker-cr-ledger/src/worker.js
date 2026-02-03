@@ -1,20 +1,20 @@
 import { route, handleFetch } from "./http.js";
-import { listPlayers } from "./db.js";
+import { listPlayers } from "./db/read.js";
 import { syncCore } from "./sync.js";
 import {
   handleRoot,
   handlePlayers,
-  handleSyncHttp,
   handleMyDecks,
   handleCards,
   handleUpdateDeckName,
   handleMyDeckCards,
-} from "./handlers.js";
+} from "./handlers/core.js";
+import { handleSyncHttp } from "./handlers/sync.js";
 import {
   handleOpponentTrend,
   handleMatchupByCard,
   handlePriority,
-} from "./legacy_handlers.js";
+} from "./handlers/legacy.js";
 
 /** ---------- worker ---------- */
 
