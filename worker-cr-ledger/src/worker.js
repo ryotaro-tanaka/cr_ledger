@@ -56,9 +56,6 @@ async function upsertOneEntry(env, entry) {
   if (entry?.team?.length !== 1 || entry?.opponent?.length !== 1)
     return { status: "skipped", reason: "not 1v1 structure" };
 
-  const arenaId = Number.isInteger(entry?.arena?.id) ? entry.arena.id : null;
-  const gameModeId = Number.isInteger(entry?.gameMode?.id) ? entry.gameMode.id : null;
-
   const myTagDb = normalizeTagForDb(my.tag);
   const opTagDb = normalizeTagForDb(op.tag);
 
@@ -78,7 +75,7 @@ async function upsertOneEntry(env, entry) {
   await upsertMePlayer(env, myTagDb, my?.name);
   await insertDeckIfNotExists(env, myDeckKey, myTagDb); // deck_name更新しない
   await upsertMyDeckCardsAsFetched(env, myDeckKey, my?.cards, mySupport, cardSlotKindFromBattlelog);
-  await upsertBattle(env, battleId, myTagDb, battleTime, result, myDeckKey, arenaId, gameModeId);
+  await upsertBattle(env, battleId, myTagDb, battleTime, result, myDeckKey);
   await upsertOpponentCardsAsFetched(env, battleId, op?.cards, opSupport, cardSlotKindFromBattlelog);
 
   return { status: "upserted", battle_id: battleId, my_deck_key: myDeckKey };
