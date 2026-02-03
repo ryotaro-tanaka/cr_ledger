@@ -9,12 +9,10 @@ erDiagram
 
   battles {
     TEXT battle_id PK
-    TEXT player_tag
+    TEXT player_tag FK
     TEXT battle_time
     TEXT result
     TEXT my_deck_key
-    INTEGER arena_id
-    INTEGER game_mode_id
   }
 
   battle_opponent_cards {
@@ -26,7 +24,7 @@ erDiagram
 
   my_decks {
     TEXT my_deck_key PK
-    TEXT player_tag
+    TEXT player_tag FK
     TEXT deck_name
   }
 
@@ -57,7 +55,7 @@ erDiagram
     INTEGER card_id PK
     TEXT slot_kind PK
     TEXT trait_key PK
-    TEXT trait_value
+    INTEGER trait_value
   }
 
   card_classes {
@@ -65,17 +63,15 @@ erDiagram
     TEXT class_key PK
   }
 
+  seasons {
+    TEXT start_time PK
+  }
+
   players ||--o{ battles : has
+  players ||--o{ my_decks : owns
   battles ||--o{ battle_opponent_cards : includes
   my_decks ||--o{ my_deck_cards : contains
-  trait_keys ||--o{ card_trait_kv : defines
   card_traits ||--o{ card_trait_kv : has
+  trait_keys ||--o{ card_trait_kv : defines
   card_traits ||--o{ card_classes : categorized_as
-  battles }o--|| my_decks : uses
-
 ```
-<!-- ER diagram rendered with Mermaid for an overall view -->
-
-<!-- Note: The card_trait_kv table was updated to include an optional integer trait_value (0-100),
-composite primary key (card_id, slot_kind, trait_key), and a foreign key on trait_key -> trait_keys.
-Please refer to docs/db/schema.md for the current DDL details. -->

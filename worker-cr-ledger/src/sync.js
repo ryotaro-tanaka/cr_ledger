@@ -10,12 +10,14 @@ import {
 } from "./domain.js";
 import {
   battleExists,
+} from "./db/read.js";
+import {
   upsertMePlayer,
   insertDeckIfNotExists,
   upsertMyDeckCardsAsFetched,
   upsertBattle,
   upsertOpponentCardsAsFetched,
-} from "./db.js";
+} from "./db/write.js";
 
 async function upsertOneEntry(env, entry) {
   const gm = entry?.gameMode?.name;
