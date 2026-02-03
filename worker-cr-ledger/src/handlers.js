@@ -1,14 +1,13 @@
-import { crCards } from "../cr_api.js";
-import { clampInt, json, readJson } from "../http.js";
-import { requirePlayerTagDb } from "../params.js";
+import { crCards } from "./cr_api.js";
+import { clampInt, json, readJson } from "./http.js";
+import { syncCore } from "./sync.js";
+import { requirePlayerTagApi, requirePlayerTagDb } from "./params.js";
 import {
   statsMyDecksLast,
-} from "../db/analytics/legacy.js";
-import {
   listPlayers,
   updateDeckName,
   getMyDeckCards,
-} from "../db/read.js";
+} from "./db.js";
 
 export async function handleRoot() {
   return new Response(
@@ -33,6 +32,13 @@ export async function handleRoot() {
 export async function handlePlayers(env) {
   const out = await listPlayers(env);
   return json({ ok: true, ...out });
+}
+
+export async function handleSyncHttp(env, url) {
+  const tagApi = requirePlayerTagApi(url);
+  const out = await syncCore(env, tagApi);
+  if (!out.ok) return json(out, 400);
+  return json(out, 200);
 }
 
 export async function handleMyDecks(env, url) {
