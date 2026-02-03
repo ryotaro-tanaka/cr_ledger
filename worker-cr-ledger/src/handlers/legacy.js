@@ -1,11 +1,11 @@
-import { clampInt, json } from "./http.js";
-import { requirePlayerTagDb } from "./params.js";
+import { clampInt, json } from "../http.js";
+import { requirePlayerTagDb } from "../params.js";
 import {
   statsOpponentTrendLast,
   statsOpponentTrendSince,
   statsMatchupByCardLast,
   statsPriorityLast,
-} from "./db.js";
+} from "../db/analytics/legacy.js";
 
 export async function handleOpponentTrend(env, url) {
   const playerTagDb = requirePlayerTagDb(url);
