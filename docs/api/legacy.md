@@ -4,10 +4,6 @@
 
 ## 前提（共通）
 
-- 認証: （CORS の preflight を除き）すべてのリクエストで Bearer トークンが必要です。
-  - Authorization: Bearer <CR_LEDGER_AUTH>
-  - トークンがない / 不正な場合: 401
-  - サーバ設定不備（トークン未設定など）: 500
 - レスポンスは原則 JSON。
 - OPTIONS は 204 を返し、CORS ヘッダを含む。
 - 成功時レスポンスには原則 `ok: true` を含む。
