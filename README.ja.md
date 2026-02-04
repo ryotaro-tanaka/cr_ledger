@@ -68,35 +68,33 @@ CR_ledger は、Stats Royale / DeckShop Pro / deckai などの
 
 ## 技術スタック（概要）
 
-- Frontend: （例）React
+- Frontend: React
 - Backend: Cloudflare Workers
 - Database: Cloudflare D1（SQLite）
-
-※ 本リポジトリには **DBスキーマや実データは含まれていません**。
 
 ---
 
 ## データについて
 
-CR_ledger は Clash Royale 公式 API の battlelog を唯一のデータソースとしています。
+CR_ledger は Clash Royale 公式 API の battlelog と cards を唯一のデータソースとしています。
 
 - カード配置・タイミング・操作ログは扱いません
 - 分析はすべて battlelog 由来の情報に基づきます
 - DB が必須であり、DB が存在しない状態ではアプリは動作しません
 
+## APIドキュメント
+
+REST/Worker 側の公開 API 仕様は本リポジトリの以下にまとめています。
+実装やクライアント互換チェックはこのファイルを参照してください。
+
+- [docs/api.md](docs/api.md)
+
 ## DBドキュメント
 
 DB 設計の詳細は以下にまとめています（Cloudflare D1 / SQLite）。
 
-- [docs/db/schema.md](docs/db/schema.md)  
-  テーブル定義・カラムの意味・制約・インデックスの解説（このファイルが主）。  
-  ※ PRAGMA の出力結果（table_info / foreign_key_list / index_list）はこの末尾に追記します。
-
-- [docs/db/schema.er.md](docs/db/schema.er.md)  
-  Mermaid による ER 図（全体把握用）。
-
 - [docs/db/notes.md](docs/db/notes.md)  
-  設計思想・割り切り・「あえてやらないこと」のメモ。
+  DB 設計・スキーマ・ER 図・実データサンプル・シード格納場所など、関連ドキュメントを集約したページです。実装や解析時はこちらを参照してください。
 
 ---
 

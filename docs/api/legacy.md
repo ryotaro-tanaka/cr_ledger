@@ -1,56 +1,16 @@
 # API仕様 (CR_ledger) — Legacy
 
-このドキュメントは Cloudflare Worker が公開する現在の HTTP API を説明します。
-ここに記載されるエンドポイントはすべて「レガシー」であり、現行クライアント互換のために残しているものです。将来的に新しい API に置き換える予定です。
+このファイルにはレガシー扱いのエンドポイント仕様をまとめています。
 
-本書は、(1) 提供された現行レスポンス例、(2) 旧 api.md の説明、の両方から確認できた内容のみをまとめています。サンプルが無い項目や挙動は本書では記載していません。
+## 前提（共通）
 
-## Base URL
-
-https://cr-ledger.ryotaro-tanaka.workers.dev
-
-## 認証
-
-（CORS の preflight を除き）すべてのリクエストで Bearer トークンが必要です。
-
-例:
-
-Authorization: Bearer <CR_LEDGER_AUTH>
-
-- トークンがない / 不正な場合: 401
-- サーバ設定不備（トークン未設定など）: 500
-
-## 共通仕様
-
-- レスポンスは原則 JSON（例外: GET / は text/plain）。
-- すべてのエンドポイントで CORS が有効。
+- 認証: （CORS の preflight を除き）すべてのリクエストで Bearer トークンが必要です。
+  - Authorization: Bearer <CR_LEDGER_AUTH>
+  - トークンがない / 不正な場合: 401
+  - サーバ設定不備（トークン未設定など）: 500
+- レスポンスは原則 JSON。
 - OPTIONS は 204 を返し、CORS ヘッダを含む。
 - 成功時レスポンスには原則 `ok: true` を含む。
-  - `ok: false` の構造はサンプル未提示のため本書では規定していません。
-
-## データ型（参照）
-
-- player_tag
-  - プレイヤータグ（先頭 `#` はあってもなくても可とされるエンドポイントがあります）
-
-- my_deck_key
-  - 形式: `{player_tag}::{card_id}:{slot_kind}|{card_id}:{slot_kind}|...`
-  - 例:
-
-    GYVCJJCR0::26000010:normal|26000014:hero|26000058:evolution|...|159000000:support
-
-- slot_kind
-  - 値: `normal` / `evolution` / `hero` / `support`
-
----
-
-# レガシーエンドポイント
-
-### GET /
-
-- 説明: 利用可能なエンドポイント例を text/plain で返します。
-- 認証: Required（preflight を除く）
-- レスポンス: `200 text/plain`
 
 ---
 
@@ -81,8 +41,6 @@ Authorization: Bearer <CR_LEDGER_AUTH>
     - `my_deck_key?`: string（`status=upserted` の場合に出現する例あり）
     - `reason?`: string（`status=skipped` の場合に出現する例あり）
 
-注記: 提供サンプルでは `GET /api/sync?player_tag=...` の形も存在していましたが、旧 api.md では `POST` と明記されているため本書では `POST /api/sync` を正として記載しています。GET が残っているかは確定できていません。
-
 ---
 
 ### GET /api/players
@@ -98,10 +56,6 @@ Authorization: Bearer <CR_LEDGER_AUTH>
   - 各要素:
     - `player_tag`: string
     - `player_name`: string
-
-最小レスポンス例（概形）:
-
-{ "ok": true, "players": [ { "player_tag": "...", "player_name": "..." } ] }
 
 ---
 
@@ -238,8 +192,6 @@ Authorization: Bearer <CR_LEDGER_AUTH>
   - `losses`: number
   - `win_rate`: number（0.0 - 1.0）
 
-補足: 同一 `card_id` が `slot_kind` 違いで重複する場合があります（例: `evolution` と `normal`）。
-
 ---
 
 ### GET /api/stats/priority
@@ -291,20 +243,4 @@ Authorization: Bearer <CR_LEDGER_AUTH>
 - `my_deck_key`: string
 - `deck_name`: string
 
-注記: 提供サンプルでは `POST /api/my-decks/name` の形が存在していましたが、旧 api.md では `PATCH` と明記されているため本書では `PATCH /api/my-decks/name` を正として記載しています。POST が残っているかは確定できていません。
-
 ---
-
-## TODO（未確認）
-
-以下はこのチャット内の情報だけでは確定できないため追記保留です。
-
-- `ok: false` のレスポンス形式（エラーコード・メッセージ構造）
-- `401` / `500` のレスポンス本文の具体例
-- `400` のレスポンス本文の具体例
-- `/api/sync` と `/api/my-decks/name` の「互換メソッド（GET/POST）」が現状も有効かどうか
-- `GET /` が返す text/plain の具体的な内容
-
----
-
-(End of document)

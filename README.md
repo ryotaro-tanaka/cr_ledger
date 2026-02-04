@@ -1,54 +1,56 @@
 # CR_ledger
 
-CR_ledger is an analytics application focused on Clash Royale that continuously collects an individual player's battlelog to help optimize and refine that player's original deck.
+CR_ledger is an analysis tool focused on
+continuously collecting a single player's battlelog in Clash Royale
+and helping that player optimize and refine their original deck.
 
-**Demo page:** https://cr-ledger.pages.dev/  
-Open the demo in a browser to quickly check behavior and UI. Please report feedback or bugs via issues.
+Demo page: https://cr-ledger.pages.dev/
+Open the demo in your browser to quickly inspect the UI. Please file issues for feedback.
 
 ---
 
 ## Concept
 
-CR_ledger is designed with the following principles in mind:
+CR_ledger is designed with the following principles:
 
-- Prioritize an individual player's real match data over general theory or meta tiers
-- Present findings as materials for consideration rather than definitive claims when sample sizes are small
-- Focus on improving deck composition rather than play-by-play actions
-- Support mastering an original deck rather than promoting template lineups
+- Prioritize a player's own match data over general meta or tiers
+- Provide investigation material without making absolute claims when sample sizes are small
+- Focus on improving deck composition rather than play techniques
+- Support mastery of original (non-template) decks
 
-This tool is intended not to decide "what to swap" for you, but to clarify "what to think about."
-
----
-
-## What it does
-
-CR_ledger collects a specific player's battlelog and provides the following analyses:
-
-- Visualization of opponent card and deck trends
-- Comparison of win rates by deck and recent win rates
-- Conditional win rate calculations for specific cards
-- Co-occurrence analysis to find troublesome card combinations
-- Overall assessment, weaknesses, and candidate improvements to guide deck improvement phases
-
-All outputs are provided as supporting information to help answer "why am I losing" and "where are the structural weaknesses."
+The tool aims to clarify "what to think about" rather than prescribe a single change.
 
 ---
 
-## Differences from existing apps
+## Capabilities
 
-CR_ledger differs from general analysis and deck sites (e.g., Stats Royale, DeckShop Pro, deckai) in these ways:
+CR_ledger collects a target player's battlelog and performs analyses such as:
 
-- Long-term accumulation of a single player's battlelog
-- Emphasis on personal optimization over universally strong decks
-- Assumes original deck use rather than template promotion
-- Focused on deck composition improvement rather than play analysis
-- Intended as decision-support rather than statistical proclamation
+- Visualizing opponent card and deck trends
+- Comparing win rates per deck and recent win rates
+- Computing conditional win rates against specific cards
+- Co-occurrence analysis for problematic card combinations
+- Providing assessments, weaknesses, and improvement candidates for deck-tuning phases
+
+These outputs are intended as supporting information to help answer "why am I losing" and "where structural weaknesses lie." 
 
 ---
 
-## Repository layout
+## How it differs from existing apps
 
-This repository contains both backend and frontend code.
+Unlike general analysis or deck-sharing apps (Stats Royale, DeckShop Pro, deckai, etc.), CR_ledger:
+
+- Can accumulate a single player's battlelog over time
+- Emphasizes individual optimization rather than generally-strong decks
+- Assumes original decks rather than template decks
+- Focuses on deck composition improvements rather than play analysis
+- Aims to support decision-making rather than make definitive statistical claims
+
+---
+
+## Repository structure
+
+The repository contains both backend and frontend code:
 
 ```
 /
@@ -59,61 +61,57 @@ This repository contains both backend and frontend code.
 
 ---
 
-## Tech stack (overview)
+## Tech stack (summary)
 
-- Frontend: (example) React
+- Frontend: React
 - Backend: Cloudflare Workers
 - Database: Cloudflare D1 (SQLite)
-
-*This repository does not include DB schema files or real data.*
 
 ---
 
 ## Data
 
-CR_ledger uses the Clash Royale official API's battlelog as its sole data source.
+CR_ledger uses the official Clash Royale API's battlelog and cards as the only data sources.
 
-- It does not handle card placement, timing, or input logs
-- All analyses are based solely on battlelog-derived information
-- A database is required; the app will not function without one
+- It does not record card placements, timings, or player input logs
+- All analyses are based on battlelog-derived information
+- A database is required; the app does not run without a DB
+
+## API documentation
+
+The REST/Worker API specification is documented in this repository:
+
+- docs/api.md
 
 ## DB documentation
 
-Database design details are documented below (Cloudflare D1 / SQLite):
+Database design details (Cloudflare D1 / SQLite) are consolidated here:
 
-- [docs/db/schema.md](docs/db/schema.md)  
-  Table definitions, column meanings, constraints, and index explanations (primary documentation).  
-  NOTE: PRAGMA outputs (table_info / foreign_key_list / index_list) will be appended to the end of this file.
-
-- [docs/db/schema.er.md](docs/db/schema.er.md)  
-  ER diagram rendered with Mermaid for an overall view.
-
-- [docs/db/notes.md](docs/db/notes.md)  
-  Design rationale, trade-offs, and "intentional omissions" notes.
+- docs/db/notes.md — contains schema, ER diagrams, sample data, and seed file locations. Refer to it for implementation and analysis.
 
 ---
 
 ## Setup (summary)
 
-To run this application you will need:
+To run this application you need:
 
-- A Cloudflare Workers execution environment
-- A Cloudflare D1 database
-- A Clash Royale API access token
+- Cloudflare Workers runtime
+- Cloudflare D1 database
+- Clash Royale API access token
 
-Detailed setup steps will be documented under `docs/`.
+Detailed setup steps will be provided in docs/.
 
 ---
 
-## Intended users
+## Target users
 
-CR_ledger is aimed at players who:
+CR_ledger is intended for players who:
 
 - Prefer using their own deck over template decks
-- Want to master a single deck in depth
-- Wish to review wins and losses using data rather than intuition
-- Are focused on improving deck composition thoughtfully
-- Value "what works for me" over general meta advice
+- Want to master a single deck
+- Prefer data-driven review of wins/losses
+- Are willing to iteratively improve deck composition
+- Value personal-fit recommendations over generic meta advice
 
 ---
 
