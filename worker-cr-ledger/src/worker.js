@@ -3,6 +3,11 @@ import { listPlayers } from "./db/read.js";
 import { syncCore } from "./sync.js";
 import { handleRoot } from "./handlers/core.js";
 import {
+  handleCommonPlayers,
+  handleCommonSync,
+  handleCommonUpdateDeckName,
+} from "./handlers/common.js";
+import {
   handleCards,
   handleMyDeckCards,
   handleMyDecks,
@@ -42,6 +47,16 @@ export default {
         "GET /api/stats/priority": async (_req, env, url) => await handlePriority(env, url),
 
         "PATCH /api/my-decks/name": async (req, env) => await handleUpdateDeckName(req, env),
+
+        // common utility endpoints
+        "GET /api/common/players": async (_req, env, url) => await handleCommonPlayers(env, url),
+
+        "PATCH /api/common/my-decks/name": async (req, env) =>
+          await handleCommonUpdateDeckName(req, env),
+
+        "POST /api/common/sync": async (req, env) => await handleCommonSync(req, env),
+
+        "GET /api/common/cards": async (req, env) => await handleCards(req, env),
       });
     });
   },
