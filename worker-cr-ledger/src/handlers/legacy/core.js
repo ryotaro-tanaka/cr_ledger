@@ -1,14 +1,14 @@
-import { crCards } from "../cr_api.js";
-import { clampInt, json, readJson } from "../http.js";
-import { requirePlayerTagDb } from "../params.js";
+import { crCards } from "../../cr_api.js";
+import { clampInt, json, readJson } from "../../http.js";
+import { requirePlayerTagDb } from "../../params.js";
 import {
   statsMyDecksLast,
-} from "../db/analytics/legacy.js";
+} from "../../db/analytics/legacy.js";
 import {
   listPlayers,
   updateDeckName,
   getMyDeckCards,
-} from "../db/read.js";
+} from "../../db/read.js";
 
 export async function handleRoot() {
   return new Response(

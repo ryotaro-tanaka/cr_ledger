@@ -1,6 +1,6 @@
-import { json } from "../http.js";
-import { requirePlayerTagApi } from "../params.js";
-import { syncCore } from "../sync.js";
+import { json } from "../../http.js";
+import { requirePlayerTagApi } from "../../params.js";
+import { syncCore } from "../../sync.js";
 
 export async function handleSyncHttp(env, url) {
   const tagApi = requirePlayerTagApi(url);

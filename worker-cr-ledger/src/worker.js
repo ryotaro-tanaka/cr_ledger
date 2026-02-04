@@ -8,13 +8,13 @@ import {
   handleCards,
   handleUpdateDeckName,
   handleMyDeckCards,
-} from "./handlers/core.js";
-import { handleSyncHttp } from "./handlers/sync.js";
+} from "./handlers/legacy/core.js";
+import { handleSyncHttp } from "./handlers/legacy/sync.js";
 import {
   handleOpponentTrend,
   handleMatchupByCard,
   handlePriority,
-} from "./handlers/legacy.js";
+} from "./handlers/legacy/stats.js";
 
 /** ---------- worker ---------- */
 
