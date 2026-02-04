@@ -1,19 +1,17 @@
 import { route, handleFetch } from "./http.js";
 import { listPlayers } from "./db/read.js";
 import { syncCore } from "./sync.js";
+import { handleRoot } from "./handlers/core.js";
 import {
-  handleRoot,
-  handlePlayers,
-  handleMyDecks,
   handleCards,
-  handleUpdateDeckName,
   handleMyDeckCards,
-} from "./handlers/core.js";
-import { handleSyncHttp } from "./handlers/sync.js";
-import {
+  handleMyDecks,
   handleOpponentTrend,
   handleMatchupByCard,
+  handlePlayers,
   handlePriority,
+  handleSyncHttp,
+  handleUpdateDeckName,
 } from "./handlers/legacy.js";
 
 /** ---------- worker ---------- */
@@ -26,6 +24,7 @@ export default {
       return route(req, env, url, {
         "GET /": async () => await handleRoot(),
 
+        // legacy endpoints (to be replaced)
         "GET /api/cards": async (req, env) => await handleCards(req, env),
 
         "GET /api/players": async (_req, env, _url) => await handlePlayers(env),
@@ -36,7 +35,6 @@ export default {
 
         "GET /api/stats/my-decks": async (_req, env, url) => await handleMyDecks(env, url),
 
-        // legacy endpoints (to be replaced)
         "GET /api/stats/opponent-trend": async (_req, env, url) => await handleOpponentTrend(env, url),
 
         "GET /api/stats/matchup-by-card": async (_req, env, url) => await handleMatchupByCard(env, url),
