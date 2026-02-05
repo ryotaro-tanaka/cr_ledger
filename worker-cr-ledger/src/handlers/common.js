@@ -3,7 +3,6 @@ import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
 import { statsMyDecksLast } from "../db/analytics/legacy.js";
 import { listPlayers, updateDeckName, getMyDeckCards } from "../db/read.js";
-import { normalizeDeckNameAllowClear } from "./deck_name.js";
 
 export async function handleCommonPlayers(env, url) {
   const last = clampInt(url.searchParams.get("last"), 1, 5000, 200);
@@ -53,6 +52,21 @@ export async function handleCommonUpdateDeckName(req, env) {
   }
 
   return json({ ok: true, my_deck_key: myDeckKey, deck_name: norm.value }, 200);
+}
+
+function normalizeDeckNameAllowClear(v) {
+  // undefined/null はエラーにしたいならここで分ける
+  if (v === undefined) return { ok: false, error: "deck_name required" };
+
+  const s = (v ?? "").toString().trim();
+
+  // 空なら「クリア」扱いで NULL
+  if (s === "") return { ok: true, value: null };
+
+  // 長さ制限（好みで）
+  if (s.length > 40) return { ok: false, error: "deck_name too long (max 40)" };
+
+  return { ok: true, value: s };
 }
 
 function mergeSyncCounts(base, next) {
