@@ -13,6 +13,10 @@ export async function handleRoot() {
       "GET   /api/stats/priority?player_tag=GYVCJJCR0&my_deck_key=...&last=500&min=10",
       "GET   /api/cards?nocache=1",
       "PATCH /api/my-decks/name",
+      "GET   /api/common/players?last=200",
+      "PATCH /api/common/my-decks/name",
+      "POST  /api/common/sync",
+      "GET   /api/common/cards?nocache=1",
     ].join("\n"),
     { headers: { "content-type": "text/plain; charset=utf-8" } }
   );

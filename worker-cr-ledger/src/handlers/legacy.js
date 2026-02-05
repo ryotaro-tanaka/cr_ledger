@@ -14,7 +14,6 @@ import {
   updateDeckName,
   getMyDeckCards,
 } from "../db/read.js";
-
 export async function handlePlayers(env) {
   const out = await listPlayers(env);
   return json({ ok: true, ...out });
