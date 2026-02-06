@@ -131,7 +131,7 @@
 
 ## C. POST /api/common/sync
 
-- 説明: 指定プレイヤーの battlelog を取得して DB に upsert します。従来の `POST /api/sync` のクエリ指定から変更し、JSON body で `player_tag` を受け取ります。`player_tag` 未指定の場合は players テーブルに登録されている全プレイヤー分を更新します。**大量実行に注意**
+- 説明: 指定プレイヤーの battlelog を取得して DB に upsert します。JSON body で `player_tag` を受け取ります。
 - JSON body:
   - `player_tag`: string（任意）
 - レスポンス:
@@ -154,7 +154,7 @@
   - `my_deck_key`: string — 同上
   - `reason`: string — status="skipped" の場合に含まれる
 
-注記: body に `player_tag` を渡す方法に切り替わった点に注意してください。`player_tag` 未指定時は全員分同期を試行します。
+注記: body に `player_tag` を渡す方法に切り替わった点に注意してください。
 
 簡易レスポンス例（短縮）:
 

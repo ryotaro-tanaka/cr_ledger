@@ -84,60 +84,17 @@ export async function handleCommonSync(req, env) {
   const body = await readJson(req);
   const rawTag = body?.player_tag;
 
-  if (rawTag !== undefined && rawTag !== null) {
-    const tag = normalizeTagForApi(rawTag);
-    if (!tag || tag === "#") return json({ ok: false, error: "player_tag required" }, 400);
-
-    const out = await syncCore(env, tag);
-    if (!out.ok) return json(out, 400);
-    return json(out, 200);
+  if (rawTag === undefined || rawTag === null) {
+    return json({ ok: false, error: "player_tag required" }, 400);
   }
 
-  const { players } = await listPlayers(env);
-  if (!players || players.length === 0) {
-    return json({
-      ok: true,
-      synced: {
-        total_fetched: 0,
-        upserted: 0,
-        skipped: 0,
-        skipped_non_target: 0,
-        skipped_other: 0,
-        stopped_early: 0,
-      },
-      results: [],
-    });
+  const tag = normalizeTagForApi(rawTag);
+  if (!tag || tag === "#") {
+    return json({ ok: false, error: "player_tag required" }, 400);
   }
 
-  let counts = {
-    total_fetched: 0,
-    upserted: 0,
-    skipped: 0,
-    skipped_non_target: 0,
-    skipped_other: 0,
-    stopped_early: 0,
-  };
-  const results = [];
-
-  for (const player of players) {
-    const tagApi = normalizeTagForApi(player.player_tag);
-    const out = await syncCore(env, tagApi);
-    if (!out.ok) {
-      counts = mergeSyncCounts(counts, {
-        total_fetched: 0,
-        upserted: 0,
-        skipped: 1,
-        skipped_non_target: 0,
-        skipped_other: 1,
-        stopped_early: 0,
-      });
-      results.push({ status: "skipped", reason: `player ${tagApi}: ${out.error}` });
-      continue;
-    }
-
-    counts = mergeSyncCounts(counts, out.synced);
-    results.push(...(out.results || []));
-  }
-
-  return json({ ok: true, synced: counts, results }, 200);
+  const out = await syncCore(env, tag);
+  if (!out.ok) return json(out, 400);
+  return json(out, 200);
 }
+

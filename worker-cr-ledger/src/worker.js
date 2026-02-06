@@ -51,8 +51,7 @@ export default {
         // common utility endpoints
         "GET /api/common/players": async (_req, env, url) => await handleCommonPlayers(env, url),
 
-        "PATCH /api/common/my-decks/name": async (req, env) =>
-          await handleCommonUpdateDeckName(req, env),
+        "PATCH /api/common/my-decks/name": async (req, env) => await handleCommonUpdateDeckName(req, env),
 
         "POST /api/common/sync": async (req, env) => await handleCommonSync(req, env),
 
