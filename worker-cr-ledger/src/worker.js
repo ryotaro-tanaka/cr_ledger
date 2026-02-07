@@ -18,6 +18,7 @@ import {
   handleSyncHttp,
   handleUpdateDeckName,
 } from "./handlers/legacy.js";
+import { handleTrendWinConditions } from "./handlers/trend.js";
 
 /** ---------- worker ---------- */
 
@@ -56,6 +57,8 @@ export default {
         "POST /api/common/sync": async (req, env) => await handleCommonSync(req, env),
 
         "GET /api/common/cards": async (req, env) => await handleCards(req, env),
+
+        "GET /api/trend/win-conditions": async (_req, env, url) => await handleTrendWinConditions(env, url),
       });
     });
   },
