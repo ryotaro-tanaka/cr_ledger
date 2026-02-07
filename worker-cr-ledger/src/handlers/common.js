@@ -69,17 +69,6 @@ function normalizeDeckNameAllowClear(v) {
   return { ok: true, value: s };
 }
 
-function mergeSyncCounts(base, next) {
-  return {
-    total_fetched: base.total_fetched + next.total_fetched,
-    upserted: base.upserted + next.upserted,
-    skipped: base.skipped + next.skipped,
-    skipped_non_target: base.skipped_non_target + next.skipped_non_target,
-    skipped_other: base.skipped_other + next.skipped_other,
-    stopped_early: base.stopped_early + next.stopped_early,
-  };
-}
-
 export async function handleCommonSync(req, env) {
   const body = await readJson(req);
   const rawTag = body?.player_tag;

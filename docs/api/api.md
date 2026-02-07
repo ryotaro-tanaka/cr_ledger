@@ -233,3 +233,53 @@
   ]
 }
 ```
+
+
+# トレンド API (/api/trend)
+
+## GET /api/trend/win-conditions
+
+特定プレイヤーの対戦ログをベースに card_classes.class_key = 'win_condition' のカードのFractionalポイントを取得する。
+Fractionalでカードをカウントする。1試合に1ポイントずつある。
+相手のデッキのwin_conditionのカード枚数によってポイントの割り振り方が変わる。
+- win_conditionカード1枚: 対象のwin_conditionカードに1ポイント。
+- win_conditionカードk枚: 対象の各win_conditionカードに1/kポイント。
+- win_conditionカード0枚: no_win_condition_pointsに1ポイント。
+total_points は対象となった試合数に等しい。
+cardsはfractional_pointsの降順（多い順）に並べる。
+
+- required query parameter:
+  - `player_tag`(required): string
+  - `last`(optional): 直近バトル数のフィルタ(default 200, max 5000)
+- response:
+  - `200`: `{ ok, filter, no_win_condition_points, total_points, cards }`
+
+レスポンス構造（200）:
+
+- `ok`: boolean
+- `filter`: object
+  - `last`: number
+- `no_win_condition_points`: number
+- `total_points`: number
+- `cards`: array
+  - `card_id`: number
+  - `slot_kind`: "normal" | "evolution" | "hero" | "support"
+  - `fractional_points`: number
+
+レスポンス例（短縮）:
+
+```json
+{
+    "ok": true,
+    "filter": { "last": 200 },
+    "no_win_condition_points": 0,
+    "total_points": 200,
+    "cards": [
+        {
+            "card_id": 26000000,
+            "slot_kind": "normal",
+            "fractional_points": 10.5
+        }
+    ]
+}
+```
