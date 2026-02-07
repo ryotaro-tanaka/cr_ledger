@@ -54,9 +54,9 @@ The repository contains both backend and frontend code:
 
 ```
 /
-├─ worker-cr-ledger/  # API / analysis logic
-├─ cr-ledger-pwa/     # Web UI
-└─ docs/              # Design and specification documents
+├─ backend/  # API / analysis logic
+├─ frontend/ # Web UI
+└─ docs/     # Design and specification documents
 ```
 
 ---
