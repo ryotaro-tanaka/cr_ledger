@@ -57,6 +57,10 @@
 
 # 共通ユーティリティ API (/api/common)
 
+## GET /api/common/player
+
+ユーザが増えてきたら`/api/common/players`が巨大になるので必要。
+
 ## A. GET /api/common/players
 
 - 説明: 既知のプレイヤー一覧と各プレイヤーのデッキ情報（my-decks / my-deck-cards 相当）を一括で返します。フロントの導線を簡潔にするため players / my-decks / my-deck-cards を統合したエンドポイントです。
@@ -234,8 +238,7 @@
 }
 ```
 
-
-# トレンド API (/api/trend)
+# /api/trend
 
 ## GET /api/trend/win-conditions
 
@@ -248,14 +251,21 @@ Fractionalでカードをカウントする。1試合に1ポイントずつあ�
 total_points は対象となった試合数に等しい。
 cardsはfractional_pointsの降順（多い順）に並べる。
 
+<!-- 
+そのwin_conditionが単体で使われるか、複数win_conditionで使われるか、
+また複数で使われるならどのwin_conditionとセットで使われるのかの分析が必要かもしれない 
+個人バトルログをベースにしているからデータが少なく作れない？
+-->
+
 - required query parameter:
-  - `player_tag`(required): string
-  - `last`(optional): 直近バトル数のフィルタ(default 200, max 5000)
+  - `player_tag`: string
+- optional query parameter:
+  - `last`: number - 直近バトル数のフィルタ(default 200, max 5000)
+  <!-- - `seasons`: number - 直近シーズン -->
 - response:
   - `200`: `{ ok, filter, no_win_condition_points, total_points, cards }`
 
-レスポンス構造（200）:
-
+Response Structure (200):
 - `ok`: boolean
 - `filter`: object
   - `last`: number
@@ -266,8 +276,7 @@ cardsはfractional_pointsの降順（多い順）に並べる。
   - `slot_kind`: "normal" | "evolution" | "hero" | "support"
   - `fractional_points`: number
 
-レスポンス例（短縮）:
-
+Sample Response (shortened):
 ```json
 {
     "ok": true,
@@ -279,6 +288,106 @@ cardsはfractional_pointsの降順（多い順）に並べる。
             "card_id": 26000000,
             "slot_kind": "normal",
             "fractional_points": 10.5
+        }
+    ]
+}
+```
+## GET /api/trend/pair/win-condition
+
+# /api/decks
+
+## GET /api/decks/{my_deck_key}/matchups/by-traits
+
+デッキの対traitsの勝率を出力する。
+
+- 
+- required query parameter:
+- optional query parameter:
+  - `last`: number - 直近バトル数のフィルタ(default 200, max 5000)
+  - `seasons`: number - 対象シーズン数のフィルタ(default 2)
+<!-- - response:
+  - `200`: `{ ok, filter, traits }` -->
+
+Response Structure (200):
+- `ok`: boolean
+- `filter`: object
+  - `last`: number
+- `traits`: array
+  - `name`: string
+  - `point`: number
+  - `cards`: array
+    - `cards_id`: number
+    - `slot_kind`: "normal" | "evolution" | "hero" | "support"
+
+Sample Response (shortened):
+
+```json
+```
+
+## GET /api/decks/{my_deck_key}/matchups/by-win-condition
+
+## GET /api/decks/{my_deck_key}/traits
+## GET /api/decks/{my_deck_key}/summary
+
+この API は デッキの構造（カード・trait・class）のみを返す。
+戦績・トレンド・相性（勝率）などの 動的集計とelixir_costは含めない（別 API で取得しフロントで合成する）。
+/api/common/players をクライアントで実行している前提で、decksを補足する。
+
+- cards: my_deck_cardsテーブルからcard_idとslot_kindを取得し、card_trait_kv.trait_key情報を紐づける。
+- deck_traits: 上記のcards情報からこのデッキの**各trait_keyを持つカードの枚数**をカウントする。
+- deck_classes: 上記のcards情報からこのデッキの**各class_keyを持つカードの枚数**をカウントする。
+
+<!-- 
+min_elixir_cycle:
+  - 低い: 後出しでカードが出しやすい。対応力が高い。特に序盤でディフェンスがしやすい。6以下。
+  - 高い: 後出しでカードを出しにくい。対応力が低い。特に序盤でディフェンスがしにくい。 8以上。
+-->
+
+- Path parameter:
+  - `my_deck_key`: string
+
+Response Structure (200):
+- `ok`: boolean
+- `deck_traits`: array
+  - `trait_key`: string
+  - `count`: number
+- `deck_classes`: array
+  - `class_key`: string
+  - `count`: number
+<!-- - `min_elixir_cycle`: number -->
+- `cards`: array
+  - `card_id`: number
+  - `slot_kind`: "normal" | "evolution" | "hero" | "support"
+  - `card_traits`: array[string]
+  - `classes`: array[string]
+
+Sample Response (shortened):
+
+```json
+{
+    "ok": true,
+    "deck_traits": [
+      {
+        "trait_key": "stun",
+        "count": 1
+      },
+      {
+        "trait_key": "is_aoe",
+        "count": 1
+      }
+    ],
+    "deck_classes": [
+      {
+        "class_key": "tank",
+        "count": 1
+      }
+    ],
+    "cards": [
+        {
+          "card_id": 26000000,
+          "slot_kind": "evolution",
+          "card_traits": ["stun", "is_aoe"],
+          "classes": ["tank"],
         }
     ]
 }
