@@ -1,4 +1,4 @@
-import { route, handleFetch } from "./http.js";
+import { route, handleFetch, normalizePathname } from "./http.js";
 import { listPlayers } from "./db/read.js";
 import { syncCore } from "./sync.js";
 import { handleRoot } from "./handlers/core.js";
@@ -7,6 +7,7 @@ import {
   handleCommonSync,
   handleCommonUpdateDeckName,
 } from "./handlers/common.js";
+import { handleDeckSummary } from "./handlers/decks.js";
 import {
   handleCards,
   handleMyDeckCards,
@@ -27,6 +28,16 @@ export default {
     const url = new URL(req.url);
 
     return handleFetch(req, env, async () => {
+      const path = normalizePathname(url.pathname);
+      if (req.method.toUpperCase() === "GET") {
+        const prefix = "/api/decks/";
+        const suffix = "/summary";
+        if (path.startsWith(prefix) && path.endsWith(suffix)) {
+          const myDeckKeyRaw = path.slice(prefix.length, path.length - suffix.length);
+          return await handleDeckSummary(env, myDeckKeyRaw);
+        }
+      }
+
       return route(req, env, url, {
         "GET /": async () => await handleRoot(),
 
