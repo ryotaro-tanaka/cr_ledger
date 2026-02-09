@@ -358,6 +358,7 @@ Response Structure (200):
 - `cards`: array
   - `card_id`: number
   - `slot_kind`: "normal" | "evolution" | "hero" | "support"
+  - `card_type`: 'unit' | 'spell' | 'building' | 'support'
   - `card_traits`: array[string]
   - `classes`: array[string]
 
@@ -386,6 +387,7 @@ Sample Response (shortened):
         {
           "card_id": 26000000,
           "slot_kind": "evolution",
+          "card_type": "unit",
           "card_traits": ["stun", "is_aoe"],
           "classes": ["tank"],
         }
