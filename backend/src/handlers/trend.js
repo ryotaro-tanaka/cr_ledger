@@ -139,49 +139,39 @@ export async function handleTrendTraits(env, url, path) {
     `
   ).bind(playerTagDb, since, since).all();
 
-  const uniqueCardIds = Array.from(
-    new Set((cardRows.results || []).map((row) => row.card_id).filter(Number.isInteger))
-  );
-
   const cardTraitsById = new Map();
   const cardTraitKvsById = new Map();
 
-  if (uniqueCardIds.length > 0) {
-    const placeholders = uniqueCardIds.map(() => "?").join(",");
+  const baseRows = await env.DB.prepare(
+    `
+    SELECT
+      card_id,
+      is_air,
+      can_damage_air,
+      primary_target_buildings,
+      is_aoe,
+      is_swarm_like
+    FROM card_traits;
+    `
+  ).all();
 
-    const baseRows = await env.DB.prepare(
-      `
-      SELECT
-        card_id,
-        is_air,
-        can_damage_air,
-        primary_target_buildings,
-        is_aoe,
-        is_swarm_like
-      FROM card_traits
-      WHERE card_id IN (${placeholders});
-      `
-    ).bind(...uniqueCardIds).all();
+  const kvRows = await env.DB.prepare(
+    `
+    SELECT
+      card_id,
+      slot_kind,
+      trait_key,
+      trait_value
+    FROM card_trait_kv;
+    `
+  ).all();
 
-    const kvRows = await env.DB.prepare(
-      `
-      SELECT
-        card_id,
-        slot_kind,
-        trait_key,
-        trait_value
-      FROM card_trait_kv
-      WHERE card_id IN (${placeholders});
-      `
-    ).bind(...uniqueCardIds).all();
-
-    for (const row of baseRows.results || []) {
-      cardTraitsById.set(row.card_id, row);
-    }
-    for (const row of kvRows.results || []) {
-      if (!cardTraitKvsById.has(row.card_id)) cardTraitKvsById.set(row.card_id, []);
-      cardTraitKvsById.get(row.card_id).push(row);
-    }
+  for (const row of baseRows.results || []) {
+    cardTraitsById.set(row.card_id, row);
+  }
+  for (const row of kvRows.results || []) {
+    if (!cardTraitKvsById.has(row.card_id)) cardTraitKvsById.set(row.card_id, []);
+    cardTraitKvsById.get(row.card_id).push(row);
   }
 
   const distributionByTrait = new Map();
