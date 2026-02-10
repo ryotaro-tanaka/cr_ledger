@@ -39,35 +39,63 @@
 
 ---
 
-## traits 解決
+## Traits Resolve 仕様（card_traits + card_trait_kv）
 
-1) Base traits（固定カラム / card_traits）
-- 対象: is_air, can_damage_air, primary_target_buildings, is_aoe, is_swarm_like
-- すべて slot_kind='all' 相当の値（デフォルト値）として扱う
+### 用語
+- Base traits: `card_traits` の固定カラムで表現される traits  
+  対象: `is_air`, `can_damage_air`, `primary_target_buildings`, `is_aoe`, `is_swarm_like`
+- KV traits: `card_trait_kv` の `trait_key` で表現される任意 traits  
+  例: `stun`, `slowdown`, `inferno`, `knockback`, ...
 
-2) Override traits（拡張KV / card_trait_kv）
-- 対象: trait_key で任意の trait を表現できる
-- slot_kind は 'all' | 'normal' | 'evolution' | 'hero' | 'support'
-- 同一 (card_id, slot_kind, trait_key) は一意（PK）
+### データの正規化
+1. Base traits は **card_traits が唯一のベースソース**（slot_kind='all'相当）。
+2. `card_trait_kv` は以下の用途のみ:
+   - (a) **slot_kind 固有の例外上書き**（Base traits を上書き）
+   - (b) **card_traits に存在しない trait（KV traits）** を付与する
+3. Base traits を `card_trait_kv(slot_kind='all')` に書かない（禁止）。
+   - KV traits の `slot_kind='all'` は許可（例: `stun` は all でOK）。
 
-### 解決アルゴリズム（Resolve）
+### Resolve の入力と出力
+- input: `(card_id, slot_kind)`
+- output: `resolved_trait_keys`（trait_key の配列）
+  - **true と判定された trait_key のみを返す**
+  - false / 0 の trait は **出力に含めない**（存在しない扱い）
 
-input : card_id, slot_kind
-output: resolved_trait_keys (with boolean value = true)
+### Resolve 手順
+1) Base traits を `card_traits` から評価する  
+- 値が 1（true）の Base traits のみを `resolved_trait_keys` に追加する  
+- 値が 0（false）の Base traits は追加しない
 
-Resolve rule:
-- 指定された (card_id, slot_kind) に一致する trait が card_trait_kv に存在すればそれを採用する。
-- 存在しない場合は slot_kind='all' の値（Base trait）を採用する。
+2) KV traits（card_traits に存在しない trait_key）を付与する  
+- `card_trait_kv` から対象行を取得（優先度: slot_kind一致 > all）
+  - 対象: (card_id, slot_kind) の行
+  - 追加で: (card_id, 'all') の行
+- 同一 trait_key が両方にある場合は slot_kind一致を優先して採用
+- これらの trait_key は `resolved_trait_keys` に追加する（true 扱い）
 
+3) Base traits の例外上書き（slot_kind 固有のみ）
+- `card_trait_kv` に存在するうち、trait_key が Base traits 名のものだけを対象にする
+- 対象は (card_id, slot_kind) のみ（'all' は見ない）
+- 見つかった場合、その trait_key の真偽で `resolved_trait_keys` を更新する
+  - true: 含める
+  - false: 除外する
+
+### 例
 例1: card_id=26000024, slot_kind='normal'
-- card_trait_kv (card_id=26000024, slot_kind='normal')で検索するが、対象行がない。
-- card_trait.is_aoe = 0 (card_traitテーブルからの情報なのでslot_key='all'として扱う)
-- この場合はcard_id=26000024, slot_kind='normal' は is_aoe = 0
+- card_traits.is_aoe = 0
+- card_trait_kv に (26000024,'normal','is_aoe',1) が無い
+=> `is_aoe` は resolved に含まれない
 
 例2: card_id=26000024, slot_kind='evolution'
-- card_trait_kv.trait_key = 'is_aoe', slot_kind = 'evolution'
-- card_trait.is_aoe = 0 (card_traitテーブルからの情報なのでslot_key='all'として扱う)
-- この場合はcard_id=26000024, slot_kind='evolution' は is_aoe = 1
+- card_traits.is_aoe = 0
+- card_trait_kv に (26000024,'evolution','is_aoe',1) がある
+=> resolved に `is_aoe` を含める（slot_kind固有の例外上書き）
+
+例3: card_id=26000084, slot_kind='normal'
+- card_traits には 'stun' は存在しない
+- card_trait_kv に (26000084,'all','stun',1) がある
+=> resolved に `stun` を含める（KV traits の付与）
+
 
 # レガシーエンドポイント
 
