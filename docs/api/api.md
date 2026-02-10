@@ -39,6 +39,36 @@
 
 ---
 
+## traits 解決
+
+1) Base traits（固定カラム / card_traits）
+- 対象: is_air, can_damage_air, primary_target_buildings, is_aoe, is_swarm_like
+- すべて slot_kind='all' 相当の値（デフォルト値）として扱う
+
+2) Override traits（拡張KV / card_trait_kv）
+- 対象: trait_key で任意の trait を表現できる
+- slot_kind は 'all' | 'normal' | 'evolution' | 'hero' | 'support'
+- 同一 (card_id, slot_kind, trait_key) は一意（PK）
+
+### 解決アルゴリズム（Resolve）
+
+input : card_id, slot_kind
+output: resolved_trait_keys (with boolean value = true)
+
+Resolve rule:
+- 指定された (card_id, slot_kind) に一致する trait が card_trait_kv に存在すればそれを採用する。
+- 存在しない場合は slot_kind='all' の値（Base trait）を採用する。
+
+例1: card_id=26000024, slot_kind='normal'
+- card_trait_kv (card_id=26000024, slot_kind='normal')で検索するが、対象行がない。
+- card_trait.is_aoe = 0 (card_traitテーブルからの情報なのでslot_key='all'として扱う)
+- この場合はcard_id=26000024, slot_kind='normal' は is_aoe = 0
+
+例2: card_id=26000024, slot_kind='evolution'
+- card_trait_kv.trait_key = 'is_aoe', slot_kind = 'evolution'
+- card_trait.is_aoe = 0 (card_traitテーブルからの情報なのでslot_key='all'として扱う)
+- この場合はcard_id=26000024, slot_kind='evolution' は is_aoe = 1
+
 # レガシーエンドポイント
 
 レガシー扱いの API 仕様は別ファイルに分割しました。詳細は以下を参照してください。
@@ -262,8 +292,8 @@ cardsはfractional_pointsの降順（多い順）に並べる。
 - optional query parameter:
   - `last`: number - 直近バトル数のフィルタ(default 200, max 5000)
   <!-- - `seasons`: number - 直近シーズン -->
-- response:
-  - `200`: `{ ok, filter, no_win_condition_points, total_points, cards }`
+<!-- - response:
+  - `200`: `{ ok, filter, no_win_condition_points, total_points, cards }` -->
 
 Response Structure (200):
 - `ok`: boolean
@@ -294,10 +324,97 @@ Sample Response (shortened):
 ```
 ## GET /api/trend/pair/win-condition
 
+## GET /api/trend/{player_tag}/traits
+
+対象プレイヤーが遭遇した相手デッキについて、各 trait の デッキ内枚数分布（Encounter-weighted） を返す。
+1バトル=1サンプルとして扱い、相手デッキ内の「traitを持つカード枚数」を集計する。
+
+カウントの定義:
+- 1バトル（相手デッキ1つ）につき、各 trait について以下を算出する:
+  trait_count = 相手デッキ内で trait=true のカード枚数
+- P(trait_count = k) = そのkになったバトル数 / total_battles
+- deck_size: support を含めて9枚で数える
+
+データソース:
+- seasons: 直近シーズン数を指定する。
+  seasonsで対象が古すぎたら最古のシーズンを開始日にする。シーズン対象にしない
+- battles: player_tag と期間で対象 battle_id を取得
+- battle_opponent_cards: battle_id -> (card_id, slot_kind) の相手カード一覧
+- trait 解決: [traits 解決](#traits-解決)
+  - base traits: card_traits
+  - kv traits: card_trait_kv
+
+ユーザが以下の内容を分布だけで判断できる:
+- is_aoe の rate_ge_2 が高い → 「swarmの重い札はリスク」
+- is_swarm_like の分布が低い → 「AoEを捨ててもよい」検討
+
+- Path parameter:
+  - `player_tag`: string
+- optional query parameter:
+  - `seasons`: number - 直近何シーズン分を対象にする（default 2, max 6）
+
+Response Structure (200):
+- `ok`: boolean
+- `filter`: object
+  - `seasons`: number
+- `total_battles`: number
+- `traits`: array
+  - `trait_key`: string
+  - `distribution`: array - kごとの分布
+    - `count`: number - trait_count = k
+    - `battles`: number - そのkだったバトル数
+    - `rate`: number - battles / total_battles
+  - `summary`: object
+    - `mean_count`: number - 平均枚数
+    - `rate_ge_2`: number - k>=2 の割合：意思決定に効くので標準で付けるのがおすすめ
+
+Sample Response (shortened):
+```json
+{
+  "ok": true,
+  "filter": {
+    "seasons": 2,
+    "include_support": 0,
+    "traits": ["is_aoe", "stun"]
+  },
+  "total_battles": 100,
+  "deck_size": 8,
+  "traits": [
+    {
+      "trait_key": "is_aoe",
+      "distribution": [
+        { "count": 0, "battles": 8,  "rate": 0.08 },
+        { "count": 1, "battles": 34, "rate": 0.34 },
+        { "count": 2, "battles": 41, "rate": 0.41 },
+        { "count": 3, "battles": 14, "rate": 0.14 },
+        { "count": 4, "battles": 3,  "rate": 0.03 }
+      ],
+      "summary": {
+        "mean_count": 1.73,
+        "rate_ge_2": 0.58
+      }
+    },
+    {
+      "trait_key": "stun",
+      "distribution": [
+        { "count": 0, "battles": 62, "rate": 0.62 },
+        { "count": 1, "battles": 31, "rate": 0.31 },
+        { "count": 2, "battles": 7,  "rate": 0.07 }
+      ],
+      "summary": {
+        "mean_count": 0.45,
+        "rate_ge_2": 0.07
+      }
+    }
+  ]
+}
+```
+
 # /api/decks
 
 ## GET /api/decks/{my_deck_key}/matchups/by-traits
 
+<!-- 未実装 -->
 デッキの対traitsの勝率を出力する。
 
 - 
@@ -333,9 +450,11 @@ Sample Response (shortened):
 戦績・トレンド・相性（勝率）などの 動的集計とelixir_costは含めない（別 API で取得しフロントで合成する）。
 /api/common/players をクライアントで実行している前提で、decksを補足する。
 
-- cards: my_deck_cardsテーブルからcard_idとslot_kindを取得し、card_trait_kv.trait_key情報を紐づける。
+- cards: my_deck_cardsテーブルからcard_idとslot_kindを取得し、card_trait_kvとcard_traitと紐づける。
 - deck_traits: 上記のcards情報からこのデッキの**各trait_keyを持つカードの枚数**をカウントする。
 - deck_classes: 上記のcards情報からこのデッキの**各class_keyを持つカードの枚数**をカウントする。
+
+[traits 解決](#traits-解決)
 
 <!-- 
 min_elixir_cycle:

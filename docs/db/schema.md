@@ -103,6 +103,10 @@ CR_ledger は Clash Royale 公式 API の battlelog（Ranked / Trophy）を元�
 ### card_trait_kv
 カードの副次特性（例外・条件付き特性）。
 
+**運用ルール**:
+    - Base traits 名（is_aoe等）は card_trait_kv に入れるとしても slot_kind固有のみ（allは禁止）
+    - KV traits 名（stun等）は card_trait_kv のみで管理し、allもOK
+
 | column | type | note |
 |------|------|------|
 | card_id | INTEGER PK | card_traits.card_id を参照 |
