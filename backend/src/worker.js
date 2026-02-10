@@ -19,7 +19,7 @@ import {
   handleSyncHttp,
   handleUpdateDeckName,
 } from "./handlers/legacy.js";
-import { handleTrendWinConditions } from "./handlers/trend.js";
+import { handleTrendTraits, handleTrendWinConditions } from "./handlers/trend.js";
 
 /** ---------- worker ---------- */
 
@@ -35,6 +35,12 @@ export default {
         if (path.startsWith(prefix) && path.endsWith(suffix)) {
           const myDeckKeyRaw = path.slice(prefix.length, path.length - suffix.length);
           return await handleDeckSummary(env, myDeckKeyRaw);
+        }
+
+        const trendPrefix = "/api/trend/";
+        const trendSuffix = "/traits";
+        if (path.startsWith(trendPrefix) && path.endsWith(trendSuffix)) {
+          return await handleTrendTraits(env, url, path);
         }
       }
 
