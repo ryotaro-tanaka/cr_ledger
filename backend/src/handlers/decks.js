@@ -512,3 +512,139 @@ export async function handleDeckOffenseCounters(env, url, path) {
     },
   });
 }
+
+export async function handleDeckDefenseThreats(env, url, path) {
+  const prefix = "/api/decks/";
+  const suffix = "/defense/threats";
+
+  const raw = path.slice(prefix.length, path.length - suffix.length);
+
+  let decoded;
+  try {
+    decoded = decodeURIComponent(raw || "").trim();
+  } catch {
+    return json({ ok: false, error: "invalid my_deck_key" }, 400);
+  }
+
+  if (!decoded) return json({ ok: false, error: "my_deck_key required" }, 400);
+
+  const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
+
+  const deckCardsRes = await env.DB.prepare(
+    `
+    SELECT
+      card_id,
+      slot_kind
+    FROM my_deck_cards
+    WHERE my_deck_key = ?
+    ORDER BY slot ASC;
+    `
+  ).bind(decoded).all();
+
+  const deckCards = deckCardsRes.results || [];
+  if (deckCards.length === 0) {
+    return json({ ok: false, error: "deck not found" }, 404);
+  }
+
+  const seasonRows = await env.DB.prepare(
+    `
+    SELECT start_time
+    FROM seasons
+    ORDER BY start_time DESC
+    LIMIT ?;
+    `
+  ).bind(seasons).all();
+
+  const seasonStartTimes = (seasonRows.results || [])
+    .map((row) => row.start_time)
+    .filter(Boolean)
+    .sort();
+  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+
+  const summaryRes = await env.DB.prepare(
+    `
+    SELECT
+      COUNT(*) AS total_battles,
+      AVG(CASE WHEN result = 'win' THEN 1.0 ELSE 0.0 END) AS baseline_win_rate
+    FROM battles
+    WHERE my_deck_key = ?
+      AND result IN ('win','loss')
+      AND (? IS NULL OR battle_time >= ?);
+    `
+  ).bind(decoded, since, since).all();
+
+  const totalBattles = Number(summaryRes.results?.[0]?.total_battles) || 0;
+  const baselineWinRate = Number(summaryRes.results?.[0]?.baseline_win_rate) || 0;
+
+  if (totalBattles === 0) {
+    return json({
+      ok: true,
+      filter: { seasons },
+      summary: {
+        total_battles: 0,
+        baseline_win_rate: 0,
+      },
+      threats: [],
+    });
+  }
+
+  const threatsRes = await env.DB.prepare(
+    `
+    WITH target_battles AS (
+      SELECT battle_id, result
+      FROM battles
+      WHERE my_deck_key = ?
+        AND result IN ('win','loss')
+        AND (? IS NULL OR battle_time >= ?)
+    ),
+    opponent_win_condition_cards AS (
+      SELECT
+        tb.battle_id,
+        tb.result,
+        boc.card_id,
+        boc.slot_kind
+      FROM target_battles tb
+      JOIN battle_opponent_cards boc
+        ON boc.battle_id = tb.battle_id
+      JOIN card_classes cc
+        ON cc.card_id = boc.card_id
+        AND cc.class_key = 'win_condition'
+      GROUP BY
+        tb.battle_id,
+        tb.result,
+        boc.card_id,
+        boc.slot_kind
+    )
+    SELECT
+      card_id,
+      slot_kind,
+      COUNT(*) AS battles_with_element,
+      SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS wins_with_element
+    FROM opponent_win_condition_cards
+    GROUP BY card_id, slot_kind;
+    `
+  ).bind(decoded, since, since).all();
+
+  const threats = (threatsRes.results || [])
+    .map((row) => ({
+      card_id: row.card_id,
+      slot_kind: row.slot_kind,
+      stats: buildCounterStats(
+        totalBattles,
+        baselineWinRate,
+        Number(row.battles_with_element) || 0,
+        Number(row.wins_with_element) || 0
+      ),
+    }))
+    .sort(sortCounterRows);
+
+  return json({
+    ok: true,
+    filter: { seasons },
+    summary: {
+      total_battles: totalBattles,
+      baseline_win_rate: baselineWinRate,
+    },
+    threats,
+  });
+}

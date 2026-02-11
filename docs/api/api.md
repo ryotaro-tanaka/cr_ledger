@@ -691,14 +691,12 @@ Path parameter:
 - my_deck_key: string
 Optional query parameters:
 - seasons: number (default 2, max 6)
-- min: number (default 10)
-  - battles_with_element >= min を満たさない要素は除外
 
 Definitions:
 - 対象バトル集合:
   - my_deck_key が一致する battles
   - seasons 指定があれば battle_time で期間フィルタ
-  - win=1, lose=0, draw は除外
+  - result は win/loss を対象（draw は除外）
 - Baseline（基準勝率）:
   - baseline_win_rate = 対象バトル集合における勝率（0..1）
 - 要素（element）:
@@ -725,12 +723,12 @@ Response Structure (200):
 ok: boolean
 filter: object
   seasons: number
-  min: number
 summary: object
   total_battles: number
   baseline_win_rate: number (0..1)
 threats: array
   card_id: number
+  slot_kind: string ('normal'|'evolution'|'hero'|'support')
   stats: object
     battles_with_element: number
     encounter_rate: number
@@ -738,13 +736,18 @@ threats: array
     delta_vs_baseline: number
     threat_score: number
 
+Sorting:
+- threat_score DESC
+- delta_vs_baseline ASC
+- battles_with_element DESC
+（`GET /api/decks/{my_deck_key}/offense/counters` と同順）
+
 Sample response (shortened):
 ```json
 {
   "ok": true,
   "filter": {
-    "seasons": 2,
-    "min": 10
+    "seasons": 2
   },
   "summary": {
     "total_battles": 184,
@@ -753,6 +756,7 @@ Sample response (shortened):
   "threats": [
     {
       "card_id": 26000000,
+      "slot_kind": "normal",
       "stats": {
         "battles_with_element": 62,
         "encounter_rate": 0.337,
