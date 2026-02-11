@@ -39,7 +39,8 @@
 
 ---
 
-## Traits Resolve 仕様（card_traits + card_trait_kv）
+## Traits Resolve
+card_traits + card_trait_kv
 
 ### 用語
 - Base traits: `card_traits` の固定カラムで表現される traits  
@@ -368,7 +369,7 @@ Sample Response (shortened):
   seasonsで対象が古すぎたら最古のシーズンを開始日にする。シーズン対象にしない
 - battles: player_tag と期間で対象 battle_id を取得
 - battle_opponent_cards: battle_id -> (card_id, slot_kind) の相手カード一覧
-- trait 解決: [traits 解決](#traits-解決)
+- trait 解決:[Traits Resolve](#Traits-Resolve)
   - base traits: card_traits
   - kv traits: card_trait_kv
 
@@ -482,7 +483,7 @@ Sample Response (shortened):
 - deck_traits: 上記のcards情報からこのデッキの**各trait_keyを持つカードの枚数**をカウントする。
 - deck_classes: 上記のcards情報からこのデッキの**各class_keyを持つカードの枚数**をカウントする。
 
-[traits 解決](#traits-解決)
+[Traits Resolve](#Traits-Resolve)
 
 <!-- 
 min_elixir_cycle:
@@ -510,7 +511,6 @@ Response Structure (200):
   - `classes`: array[string]
 
 Sample Response (shortened):
-
 ```json
 {
     "ok": true,
@@ -536,8 +536,145 @@ Sample Response (shortened):
           "slot_kind": "evolution",
           "card_type": "unit",
           "card_traits": ["stun", "is_aoe"],
-          "classes": ["tank"],
+          "classes": ["tank"]
         }
     ]
 }
 ```
+
+## GET /api/decks/{my_deck_key}/offense/counters
+
+相手デッキに含まれる要素（card / trait）と勝率悪化の関連を用いて、「止め手（counter）になりやすい要素」をランキング化する。
+本APIは因果を保証せず、条件付き勝率に基づく統計的関連を返す。
+
+<!-- あなたの勝ち筋（win_condition）に対して、相手側の「止め手（counter）」のランキングを返す。
+「何に止められやすいか」を **実測データ（相手デッキに含まれていた要素）×勝率悪化** でランキング化する。
+具体（card）と抽象（trait/base trait）を同時に出すことで、改善意思決定（“何を増やす/捨てる”）に繋げる。
+相手デッキにその trait を持つカードが「1枚でもあれば battles_with_element=1」とする。「2枚あったら2回」などの延べ枚数はこのAPIでは不要（Encounter-weightedの思想）
+本APIの定義はあくまで：
+  「あなたがそのデッキで戦った試合で、相手デッキに含まれていた要素があると勝率が落ちやすい」という 統計的関連（条件付き勝率） とする。 -->
+
+ここでの「counter」は、以下 3 階層の “要素 (element)” を指す：
+1) card（例: The Log）
+2) KV traits, Base trait: [Traits Resolve](#Traits-Resolve)参照
+  `traits[].trait_key` は Base traits / KV traits を区別せず同一キー空間として扱う。
+  例: `is_aoe`（Base）と `stun`（KV）が同じ配列に並ぶ。
+
+- Path parameter
+  - `my_deck_key`: string
+- Optional query parameters
+  - `seasons`: number (default 2, max 6)
+    - 対象期間を「直近Nシーズン」に制限する（battleTimeでフィルタ）
+
+Definitions:
+- 対象バトル集合:
+  対象は my_deck_key が一致する battles
+  期間フィルタ(seasons)がある場合は、対象期間内の battles のみに絞る
+- Baseline（基準勝率）: 
+  `baseline_win_rate` = 対象バトル集合における勝率（0〜1）
+  win = 1, lose = 0, draw は除外
+- 要素ごとの指標
+  - `battles_with_element`  
+    対象バトル集合のうち、「相手デッキに element を含む」試合数
+  - `encounter_rate`  
+    `battles_with_element / total_battles`
+  - `win_rate_given`  
+    element を含む試合に限った勝率
+  - `delta_vs_baseline`  
+    `win_rate_given - baseline_win_rate`（マイナスが悪化）
+  - `threat_score`（おすすめ）
+    `encounter_rate * max(0, baseline_win_rate - win_rate_given)`
+
+Data sources & mapping (tables)
+- battles: 対象バトル集合の抽出（my_deck_key / battle_time / result）
+- battle_opponent_cards: 「相手のデッキに含まれていた card_id/slot_kind」を列挙する
+  element (card) を作るときはこのテーブルがそのままソース。
+- card_traits: Base trait の判定（is_aoe 等）
+  join key: card_id
+- card_trait_kv / trait_keys: KV traits の判定（stun 等）
+  join key:
+    - card_trait_kv.card_id
+    - card_trait_kv.slot_kind（battle_opponent_cards.slot_kindに合わせる）
+    - card_trait_kv.trait_key -> trait_keys.trait_key
+- card_classes（クラス: win_conditionなど）: 対象デッキの win_condition 抽出（攻撃分析の対象を「勝ち筋」に寄せるため）
+  join key: card_id
+  class_key='win_condition' の card_id を対象デッキ側から抽出する
+
+Response Structure (200):
+- `ok`: boolean
+- `filter`: object
+  - `seasons`: number
+- `summary`: object
+  - `total_battles`: number
+  - `baseline_win_rate`: number (0..1)
+  - `win_condition_cards`: array
+    - `card_id`: number
+    - `slot_kind`: string ('normal'|'evolution'|'hero'|'support')
+- `counters`: object
+  - `cards`: array
+    - `card_id`: number
+    - `slot_kind`: string
+    - `stats`:
+      - `battles_with_element`
+      - `encounter_rate`
+      - `win_rate_given`
+      - `delta_vs_baseline`
+      - `threat_score`
+  - `traits`: array
+    - `trait_key`: string
+    - `description`: string | null (trait_keys.description)
+    <!-- - `example_cards`: array (optional, max 3)
+      - その trait で threat_score 貢献が大きいカード例（card_id, slot_kind） -->
+    - `stats`: 同上
+
+Sample response (shortened):
+```json
+{
+  "ok": true,
+  "filter": {
+    "seasons": 2,
+  },
+  "summary": {
+    "total_battles": 184,
+    "baseline_win_rate": 0.538,
+    "win_condition_cards": [
+      { "card_id": 26000000, "slot_kind": "normal" }
+    ]
+  },
+  "counters": {
+    "cards": [
+      {
+        "card_id": 28000011,
+        "slot_kind": "normal",
+        "stats": {
+          "battles_with_element": 62,
+          "encounter_rate": 0.337,
+          "win_rate_given": 0.403,
+          "delta_vs_baseline": -0.135,
+          "threat_score": 0.0455
+        }
+      }
+    ],
+    "traits": [
+      {
+        "trait_key": "stun",
+        "description": "Zap系カードの代表的効果。対象の行動を一瞬停止させる…",
+        // "example_cards": [
+        //   { "card_id": 28000008, "slot_kind": "normal" }
+        // ],
+        "stats": {
+          "battles_with_element": 71,
+          "encounter_rate": 0.386,
+          "win_rate_given": 0.451,
+          "delta_vs_baseline": -0.087,
+          "threat_score": 0.0336
+        }
+      }
+    ]
+  }
+}
+```
+
+**補足**：あなたの仕様に合わせた重要な一言（設計のぶれ止め）
+- このAPIは **“攻撃が止められる要素” の推定**であって、**確定的なメタ表**ではない  
+- だからこそ、`encounter_rate` と `delta_vs_baseline` の両方を必ず出す（片方だけだと誤解が増える）
