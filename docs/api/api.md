@@ -678,3 +678,89 @@ Sample response (shortened):
 **補足**：あなたの仕様に合わせた重要な一言（設計のぶれ止め）
 - このAPIは **“攻撃が止められる要素” の推定**であって、**確定的なメタ表**ではない  
 - だからこそ、`encounter_rate` と `delta_vs_baseline` の両方を必ず出す（片方だけだと誤解が増える）
+
+## GET /api/decks/{my_deck_key}/defense/threats
+
+対象デッキ（my_deck_key）の対戦履歴から、相手デッキ側の「攻め手（threat）」になりやすい要素をランキング化する。
+本APIは因果を保証せず、条件付き勝率に基づく統計的関連を返す。
+
+ここでの「threat」は 相手の win_condition を主対象とする（最小実装）。
+将来的に、必要なら “threat を補助するカード/trait” も拡張できるが、本APIでは扱わない。
+
+Path parameter:
+- my_deck_key: string
+Optional query parameters:
+- seasons: number (default 2, max 6)
+- min: number (default 10)
+  - battles_with_element >= min を満たさない要素は除外
+
+Definitions:
+- 対象バトル集合:
+  - my_deck_key が一致する battles
+  - seasons 指定があれば battle_time で期間フィルタ
+  - win=1, lose=0, draw は除外
+- Baseline（基準勝率）:
+  - baseline_win_rate = 対象バトル集合における勝率（0..1）
+- 要素（element）:
+  - win_condition_card（card_id）
+  - 定義: 相手デッキに class_key='win_condition' のカードが 1枚でも含まれると、その battle は “element を含む” とみなす
+  （複数含まれる場合は、それぞれの element に対して battles_with_element を加算する：最小実装）
+- 要素ごとの指標
+  - battles_with_element
+  - encounter_rate = battles_with_element / total_battles
+  - win_rate_given = element を含む試合に限った勝率
+  - delta_vs_baseline = win_rate_given - baseline_win_rate（マイナスが悪化）
+  - threat_score = encounter_rate * max(0, baseline_win_rate - win_rate_given)
+
+Data sources & mapping (tables):
+- battles
+  対象バトル集合の抽出（my_deck_key / battle_time / result）
+- battle_opponent_cards
+  相手デッキに含まれていた card_id/slot_kind の列挙
+- card_classes
+  win_condition 判定（join key: card_id, filter: class_key='win_condition'）
+  相手側の win_condition 抽出に使う
+
+Response Structure (200):
+ok: boolean
+filter: object
+  seasons: number
+  min: number
+summary: object
+  total_battles: number
+  baseline_win_rate: number (0..1)
+threats: array
+  card_id: number
+  stats: object
+    battles_with_element: number
+    encounter_rate: number
+    win_rate_given: number
+    delta_vs_baseline: number
+    threat_score: number
+
+Sample response (shortened):
+```json
+{
+  "ok": true,
+  "filter": {
+    "seasons": 2,
+    "min": 10
+  },
+  "summary": {
+    "total_battles": 184,
+    "baseline_win_rate": 0.538
+  },
+  "threats": [
+    {
+      "card_id": 26000000,
+      "stats": {
+        "battles_with_element": 62,
+        "encounter_rate": 0.337,
+        "win_rate_given": 0.403,
+        "delta_vs_baseline": -0.135,
+        "threat_score": 0.0455
+      }
+    }
+  ]
+}
+```
