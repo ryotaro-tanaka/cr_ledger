@@ -7,7 +7,11 @@ import {
   handleCommonSync,
   handleCommonUpdateDeckName,
 } from "./handlers/common.js";
-import { handleDeckOffenseCounters, handleDeckSummary } from "./handlers/decks.js";
+import {
+  handleDeckDefenseThreats,
+  handleDeckOffenseCounters,
+  handleDeckSummary,
+} from "./handlers/decks.js";
 import {
   handleCards,
   handleMyDeckCards,
@@ -40,6 +44,11 @@ export default {
         const offenseCountersSuffix = "/offense/counters";
         if (path.startsWith(prefix) && path.endsWith(offenseCountersSuffix)) {
           return await handleDeckOffenseCounters(env, url, path);
+        }
+
+        const defenseThreatsSuffix = "/defense/threats";
+        if (path.startsWith(prefix) && path.endsWith(defenseThreatsSuffix)) {
+          return await handleDeckDefenseThreats(env, url, path);
         }
 
         const trendPrefix = "/api/trend/";
