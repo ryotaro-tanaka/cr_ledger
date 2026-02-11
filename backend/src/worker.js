@@ -7,7 +7,7 @@ import {
   handleCommonSync,
   handleCommonUpdateDeckName,
 } from "./handlers/common.js";
-import { handleDeckSummary } from "./handlers/decks.js";
+import { handleDeckOffenseCounters, handleDeckSummary } from "./handlers/decks.js";
 import {
   handleCards,
   handleMyDeckCards,
@@ -35,6 +35,11 @@ export default {
         if (path.startsWith(prefix) && path.endsWith(suffix)) {
           const myDeckKeyRaw = path.slice(prefix.length, path.length - suffix.length);
           return await handleDeckSummary(env, myDeckKeyRaw);
+        }
+
+        const offenseCountersSuffix = "/offense/counters";
+        if (path.startsWith(prefix) && path.endsWith(offenseCountersSuffix)) {
+          return await handleDeckOffenseCounters(env, url, path);
         }
 
         const trendPrefix = "/api/trend/";
