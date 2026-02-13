@@ -15,6 +15,8 @@ import type {
   TrendTraitsResponse,
 } from "../api/types";
 
+type PlanDecision = "consider" | "hold";
+
 function prettyKey(k: string): string {
   return k.replace(/^is_/, "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
@@ -53,7 +55,7 @@ export default function ImprovePage() {
   const [offense, setOffense] = useState<DeckOffenseCountersResponse | null>(null);
   const [defense, setDefense] = useState<DeckDefenseThreatsResponse | null>(null);
   const [trend, setTrend] = useState<TrendTraitsResponse | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [planDecisions, setPlanDecisions] = useState<Record<string, PlanDecision>>({});
 
   useEffect(() => {
     if (!player || !deckKey) return;
@@ -63,6 +65,7 @@ export default function ImprovePage() {
     void (async () => {
       setLoading(true);
       setErr(null);
+      setPlanDecisions({});
       try {
         const [off, def, tr] = await Promise.all([
           getDeckOffenseCounters(deckKey, seasons),
@@ -177,7 +180,12 @@ export default function ImprovePage() {
     return xs.sort((a, b) => b.score - a.score).slice(0, 3);
   }, [topTrendTrait, topDefenseCard, topOffenseTrait, master]);
 
-  const selectedPlanData = useMemo(() => plans.find((p) => p.id === selectedPlan) ?? null, [plans, selectedPlan]);
+  const selectedPlanData = useMemo(
+    () => plans.find((p) => planDecisions[p.id] === "consider") ?? null,
+    [plans, planDecisions]
+  );
+
+  const holdCount = useMemo(() => plans.filter((p) => planDecisions[p.id] === "hold").length, [plans, planDecisions]);
 
   const nextCandidates = useMemo(() => {
     const xs: string[] = [];
@@ -231,31 +239,42 @@ export default function ImprovePage() {
             <div className="text-sm font-semibold text-slate-900">🟦 Step 2：改善候補（最大3）</div>
             {selectedPlanData ? (
               <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                選択中：{selectedPlanData.title}（まずは3〜5戦の試行候補）
+                検討中：{selectedPlanData.title}（まずは3〜5戦で試す）
+              </div>
+            ) : null}
+            {!selectedPlanData && holdCount > 0 ? (
+              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                保留中：{holdCount}件（後で見直し）
               </div>
             ) : null}
             <div className="mt-3 space-y-3">
-              {plans.map((p) => (
-                <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-3">
-                  <div className="text-sm font-semibold text-slate-900">{p.title}</div>
-                  <div className="mt-1 text-xs text-slate-600">→ {p.reason}</div>
-                  <div className="mt-1 text-[11px] text-slate-500">判断の目安: {p.cue}</div>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => setSelectedPlan(p.id)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-medium ${selectedPlan === p.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
-                    >
-                      この方向で検討する
-                    </button>
-                    <button
-                      onClick={() => setSelectedPlan(null)}
-                      className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200"
-                    >
-                      今は保留
-                    </button>
+              {plans.map((p) => {
+                const decision = planDecisions[p.id];
+                return (
+                  <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="text-sm font-semibold text-slate-900">{p.title}</div>
+                    <div className="mt-1 text-xs text-slate-600">→ {p.reason}</div>
+                    <div className="mt-1 text-[11px] text-slate-500">判断の目安: {p.cue}</div>
+                    {decision ? (
+                      <div className="mt-1 text-[11px] text-slate-600">状態: {decision === "consider" ? "この方向で検討中" : "いったん保留中"}</div>
+                    ) : null}
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => setPlanDecisions((prev) => ({ ...prev, [p.id]: "consider" }))}
+                        className={`rounded-xl px-3 py-1.5 text-xs font-medium ${decision === "consider" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                      >
+                        この方向で検討する
+                      </button>
+                      <button
+                        onClick={() => setPlanDecisions((prev) => ({ ...prev, [p.id]: "hold" }))}
+                        className={`rounded-xl px-3 py-1.5 text-xs font-medium ${decision === "hold" ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                      >
+                        今は保留する
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </SectionCard>
 

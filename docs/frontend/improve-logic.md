@@ -34,11 +34,12 @@ All three are fetched in parallel after player/deck are selected.
 
 - Step 1 shows one issue, risk bar, and key numbers.
 - Win-rate delta is shown with sign (`+/-`) for readability.
-- Step 2 shows up to 3 plan cards with simple decision buttons:
-  - "この方向で検討する"
-  - "今は保留"
-- When selected, the chosen plan is pinned as a short "3〜5戦で試行" reminder.
-- Each plan includes one-line decision cue (what to compare first).
+- Step 2 shows up to 3 plan cards with decision buttons:
+  - "この方向で検討する" sets that plan to **considering** state
+  - "今は保留する" sets that plan to **on hold** state
+- The chosen considering plan is pinned as a short "3〜5戦で試す" reminder.
+- If nothing is selected but hold items exist, hold count is shown.
+- Each plan includes one-line decision cue (what to compare first) and current state label.
 - Supporting numbers stay in `<details>` to reduce cognitive load.
 - Copy explicitly keeps non-causal phrasing (correlation-based suggestion).
 
