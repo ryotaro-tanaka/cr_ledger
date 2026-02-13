@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelection } from "../lib/selection";
 import ApiErrorPanel from "../components/ApiErrorPanel";
-import SyncCard from "./home/SyncCard";
 import SectionCard from "../components/SectionCard";
 import { getDeckSummary } from "../api/api";
 import type { DeckSummaryResponse } from "../api/types";
@@ -111,17 +110,16 @@ export default function HomePage() {
     });
   }, [selectedDeckBase, data]);
 
-  const averageElixir = useMemo(() => {
-    // Average is based on non-support slots to align with in-battle playable deck cards.
-    const costs = mergedCards
-      .filter((c) => c.slot_kind !== "support")
+  const minimumElixirCycle = useMemo(() => {
+    const baseCards = (selectedDeckBase?.cards ?? []).filter((c) => c.slot >= 0 && c.slot <= 7);
+    const costs = baseCards
       .map((c) => master?.getElixirCost(c.card_id) ?? null)
-      .filter((c): c is number => c != null);
+      .filter((c): c is number => c != null)
+      .sort((a, b) => a - b);
 
-    if (costs.length === 0) return null;
-    const avg = costs.reduce((sum, c) => sum + c, 0) / costs.length;
-    return Math.round(avg * 10) / 10;
-  }, [mergedCards, master]);
+    if (costs.length < 4) return null;
+    return costs.slice(0, 4).reduce((sum, c) => sum + c, 0);
+  }, [selectedDeckBase, master]);
 
   const deckIdentityLines = useMemo(() => {
     if (!data) return [];
@@ -134,7 +132,7 @@ export default function HomePage() {
     const aoeCount = traitCount("aoe");
     const airCount = traitCount("anti_air") + traitCount("air");
 
-    const speed = averageElixir == null ? "不明" : averageElixir <= 3.1 ? "高速" : averageElixir <= 4.0 ? "中速" : "低速";
+    const speed = minimumElixirCycle == null ? "不明" : minimumElixirCycle <= 9 ? "高速" : minimumElixirCycle <= 12 ? "中速" : "低速";
     const style = winConCount >= 2 ? "Bridge Spam寄り" : aoeCount >= 3 ? "Control寄り" : "Balanced寄り";
     const aoeRes = aoeCount >= 4 ? "高め" : aoeCount >= 2 ? "普通" : "低め";
     const airRes = airCount >= 3 ? "高め" : airCount >= 1 ? "普通" : "低め";
@@ -145,7 +143,7 @@ export default function HomePage() {
       `Air耐性は ${airRes}`,
       `サイクル速度は ${speed}`,
     ];
-  }, [data, averageElixir]);
+  }, [data, minimumElixirCycle]);
 
   const strengths = useMemo(() => {
     if (!data) return [];
@@ -162,10 +160,10 @@ export default function HomePage() {
     if (air >= 3) xs.push("Airへの対応力が高い");
     if (aoe >= 3) xs.push(`AoEを${aoe}枚持つ`);
     if (winCon >= 2) xs.push(`Win Conditionが${winCon}枚`);
-    if (averageElixir != null && averageElixir <= 3.3) xs.push("回転が速く主導権を取りやすい");
+    if (minimumElixirCycle != null && minimumElixirCycle <= 10) xs.push("回転が速く主導権を取りやすい");
     if (xs.length < 3) xs.push("カード役割の重複が少なく安定しやすい");
     return xs.slice(0, 3);
-  }, [data, averageElixir]);
+  }, [data, minimumElixirCycle]);
 
   const weaknesses = useMemo(() => {
     if (!data) return [];
@@ -186,10 +184,10 @@ export default function HomePage() {
     if (stunResist === 0) xs.push("Immobilizeに弱い可能性がある");
     if (antiSwarm <= 1) xs.push("Swarm対策が薄い");
     if (building === 0) xs.push("受けの建物が少ない");
-    if (averageElixir != null && averageElixir >= 4.3) xs.push("重め構成で受け遅れリスクがある");
+    if (minimumElixirCycle != null && minimumElixirCycle >= 13) xs.push("重め構成で受け遅れリスクがある");
     if (xs.length < 3) xs.push("同系統マッチで後手になりやすい");
     return xs.slice(0, 3);
-  }, [data, averageElixir]);
+  }, [data, minimumElixirCycle]);
 
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
@@ -215,7 +213,6 @@ export default function HomePage() {
 
       {cardsError ? <ApiErrorPanel title="Cards error" detail={cardsError} /> : null}
 
-      <SyncCard />
 
       <SectionCard>
         <div className="text-sm font-semibold text-slate-900">デッキの性格（5秒サマリー）</div>
@@ -254,6 +251,16 @@ export default function HomePage() {
                 ))}
               </ul>
             </div>
+
+            <details className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">この判定のルール</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                <li>Control / Bridge Spam / Balanced は win_condition 枚数と aoe 枚数で判定。</li>
+                <li>AoE耐性・Air耐性は trait 内の該当キーワードの合計枚数で判定。</li>
+                <li>サイクル速度は slot0-7 のカードから最小4枚の elixir 合計（最小エリクサーサイクル）で判定。</li>
+                <li>強み・弱みは上記指標の閾値判定で最大3件を表示。</li>
+              </ul>
+            </details>
 
             <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
               <summary className="cursor-pointer text-xs font-semibold text-slate-600">詳細（traits / classes / cards）</summary>
@@ -297,7 +304,7 @@ export default function HomePage() {
                 <div>
                   <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
                     <span>Cards</span>
-                    <span>avg elixir {averageElixir ?? "-"}</span>
+                    <span>最小エリクサーサイクル {minimumElixirCycle ?? "-"}</span>
                   </div>
                   <div className="mt-2 space-y-2">
                     {mergedCards.length === 0 ? (
