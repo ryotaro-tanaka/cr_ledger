@@ -7,6 +7,7 @@ import type {
   SyncResponse,
   MatchupByCardResponse,
   MyDeckCardsResponse,
+  DeckSummaryResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -126,4 +127,8 @@ export function updateDeckName(myDeckKey: string, deckName: string): Promise<{ o
     method: "PATCH",
     body: { my_deck_key: myDeckKey, deck_name: deckName },
   });
+}
+
+export function getDeckSummary(myDeckKey: string): Promise<DeckSummaryResponse> {
+  return request<DeckSummaryResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/summary`);
 }

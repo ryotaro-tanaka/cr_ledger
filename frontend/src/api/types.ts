@@ -108,3 +108,21 @@ export type MyDeckCardsResponse = {
     slot_kind: SlotKind;
   }>;
 };
+
+export type DeckSummaryResponse = ApiBaseOk & {
+  deck_traits: Array<{
+    trait_key: string;
+    count: number;
+  }>;
+  deck_classes: Array<{
+    class_key: string;
+    count: number;
+  }>;
+  cards: Array<{
+    card_id: number;
+    slot_kind: SlotKind;
+    card_type: "unit" | "spell" | "building" | "support";
+    card_traits: string[];
+    classes: string[];
+  }>;
+};
