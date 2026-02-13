@@ -122,6 +122,7 @@ Response example (200):
   "ok": true,
   "filter": { "seasons": 2 },
   "total_battles": 100,
+  "deck_size": 9,
   "traits": [
     {
       "trait_key": "is_aoe",

@@ -40,6 +40,7 @@
 ## 共通エラーレスポンス
 
 - エラー時の基本形は `ok: false` と `error`（string）。
+- ただし「ルート未提供」の `404` は `Not Found: <path>` の `text/plain` を返す。
 - 一部 API はエラー時にも追加フィールドを含む場合がある（例: sync 系）。
 - 共通的なステータス:
   - `400`: 入力不正
@@ -79,13 +80,14 @@ Request:
 
 Responses:
 - 401: 認証エラー
+- 404: ルート未提供（現状未実装）
 - 500: サーバ内部エラー
-- 501: 未実装（仕様策定中）
 
 Response schema (200):
-- 未実装（仕様策定中）
+- 未提供（仕様策定中）
 
 Notes:
+- 現時点ではルート未提供。実装時にこの節を更新する。
 - `/api/common/players` の肥大化対策として必要になる想定。
 
 ## GET /api/common/players
@@ -166,7 +168,6 @@ Request:
   - `player_tag`: string (required)
 
 Responses:
-- 400: パラメータ不正
 - 401: 認証エラー
 - 500: サーバ内部エラー
 
@@ -238,7 +239,6 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 400: パラメータ不正
 - 401: 認証エラー
 - 500: サーバ内部エラー
 
@@ -272,14 +272,14 @@ Request:
 
 Responses:
 - 401: 認証エラー
+- 404: ルート未提供（現状未実装）
 - 500: サーバ内部エラー
-- 501: 未実装（仕様策定中）
 
 Response schema (200):
-- 未実装（仕様策定中）
+- 未提供（仕様策定中）
 
 Notes:
-- 実装・スキーマともに未確定。
+- 現時点ではルート未提供。実装・スキーマともに未確定。
 
 ## GET /api/trend/{player_tag}/traits
 
@@ -304,6 +304,7 @@ Response schema (200):
 - `ok`: boolean
 - `filter.seasons`: number
 - `total_battles`: number
+- `deck_size`: number
 - `traits[]`:
   - `trait_key`: string
   - `distribution[]`:
@@ -334,22 +335,15 @@ Request:
 
 Responses:
 - 401: 認証エラー
+- 404: ルート未提供（現状未実装）
 - 500: サーバ内部エラー
-- 501: 未実装（仕様策定中）
 
 Response schema (200):
-- 草案:
-  - `ok`: boolean
-  - `filter.last`: number
-  - `traits[]`:
-    - `name`: string
-    - `point`: number
-    - `cards[]`:
-      - `card_id`: number
-      - `slot_kind`: `normal | evolution | hero | support`
+- 未提供（仕様策定中）
 
 Notes:
-- 仕様策定中のため、レスポンス草案は変更可能性あり。
+- 現時点ではルート未提供。
+- 仕様策定中のため、スキーマは実装時に確定する。
 
 ## GET /api/decks/{my_deck_key}/matchups/by-win-condition
 
@@ -364,14 +358,14 @@ Request:
 
 Responses:
 - 401: 認証エラー
+- 404: ルート未提供（現状未実装）
 - 500: サーバ内部エラー
-- 501: 未実装（仕様策定中）
 
 Response schema (200):
-- 未実装（仕様策定中）
+- 未提供（仕様策定中）
 
 Notes:
-- 実装・スキーマともに未確定。
+- 現時点ではルート未提供。実装・スキーマともに未確定。
 
 ## GET /api/decks/{my_deck_key}/traits
 
@@ -387,12 +381,13 @@ Request:
 Responses:
 - 401: 認証エラー
 - 500: サーバ内部エラー
-- 501: 未実装（仕様策定中）
+- 404: ルート未提供（現状未実装）
 
 Response schema (200):
-- 未実装（仕様策定中）
+- 未提供（仕様策定中）
 
 Notes:
+- 現時点ではルート未提供。
 - 同等情報は現時点では `/api/decks/{my_deck_key}/summary` に含まれる。
 
 ## GET /api/decks/{my_deck_key}/summary
