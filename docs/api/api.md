@@ -36,7 +36,16 @@
 ## 共通レスポンス
 
 - 成功時は原則 `ok: true` を含む。
-- 失敗時 `ok: false` の詳細構造は本書では未規定。
+
+## 共通エラーレスポンス
+
+- エラー時の基本形は `ok: false` と `error`（string）。
+- 一部 API はエラー時にも追加フィールドを含む場合がある（例: sync 系）。
+- 共通的なステータス:
+  - `400`: 入力不正
+  - `401`: 認証エラー
+  - `404`: リソース未存在（該当APIのみ）
+  - `500`: サーバ内部エラー（設定不備 / 予期しない例外）
 
 ## GET /
 
@@ -49,7 +58,8 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `text/plain`
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response schema (200):
 - プレーンテキスト
@@ -68,6 +78,8 @@ Request:
 - JSON Body: なし
 
 Responses:
+- 401: 認証エラー
+- 500: サーバ内部エラー
 - 501: 未実装（仕様策定中）
 
 Response schema (200):
@@ -88,7 +100,8 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -147,9 +160,10 @@ Request:
   - `deck_name`: string（空文字でクリア）
 
 Responses:
-- 200: 成功
 - 400: 入力不正
+- 401: 認証エラー
 - 404: デッキ未存在
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -177,11 +191,12 @@ Request:
 - Path Params: なし
 - Query Params: なし
 - JSON Body:
-  - `player_tag`: string (optional)
+  - `player_tag`: string (required)
 
 Responses:
-- 200: 同期サマリと明細
 - 400: パラメータ不正
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -236,7 +251,8 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -295,7 +311,9 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 400: パラメータ不正
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -340,6 +358,8 @@ Request:
 - JSON Body: なし
 
 Responses:
+- 401: 認証エラー
+- 500: サーバ内部エラー
 - 501: 未実装（仕様策定中）
 
 Response schema (200):
@@ -361,7 +381,8 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -415,6 +436,8 @@ Request:
 - JSON Body: なし
 
 Responses:
+- 401: 認証エラー
+- 500: サーバ内部エラー
 - 501: 未実装（仕様策定中）
 
 Response schema (200):
@@ -443,6 +466,8 @@ Request:
 - JSON Body: なし
 
 Responses:
+- 401: 認証エラー
+- 500: サーバ内部エラー
 - 501: 未実装（仕様策定中）
 
 Response schema (200):
@@ -463,6 +488,8 @@ Request:
 - JSON Body: なし
 
 Responses:
+- 401: 認証エラー
+- 500: サーバ内部エラー
 - 501: 未実装（仕様策定中）
 
 Response schema (200):
@@ -483,7 +510,9 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 400: パラメータ不正
+- 401: 認証エラー
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -540,7 +569,10 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 400: パラメータ不正
+- 401: 認証エラー
+- 404: デッキ未存在
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
@@ -626,7 +658,10 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: 成功
+- 400: パラメータ不正
+- 401: 認証エラー
+- 404: デッキ未存在
+- 500: サーバ内部エラー
 
 Response example (200):
 ```json
