@@ -110,6 +110,7 @@ export default function HomePage() {
       return a.card_id - b.card_id;
     });
   }, [selectedDeckBase, data]);
+
   const averageElixir = useMemo(() => {
     // Average is based on non-support slots to align with in-battle playable deck cards.
     const costs = mergedCards
@@ -122,6 +123,73 @@ export default function HomePage() {
     return Math.round(avg * 10) / 10;
   }, [mergedCards, master]);
 
+  const deckIdentityLines = useMemo(() => {
+    if (!data) return [];
+    const traitCount = (keyIncludes: string) =>
+      data.deck_traits
+        .filter((t) => t.trait_key.includes(keyIncludes))
+        .reduce((sum, t) => sum + t.count, 0);
+
+    const winConCount = traitCount("win_condition");
+    const aoeCount = traitCount("aoe");
+    const airCount = traitCount("anti_air") + traitCount("air");
+
+    const speed = averageElixir == null ? "不明" : averageElixir <= 3.1 ? "高速" : averageElixir <= 4.0 ? "中速" : "低速";
+    const style = winConCount >= 2 ? "Bridge Spam寄り" : aoeCount >= 3 ? "Control寄り" : "Balanced寄り";
+    const aoeRes = aoeCount >= 4 ? "高め" : aoeCount >= 2 ? "普通" : "低め";
+    const airRes = airCount >= 3 ? "高め" : airCount >= 1 ? "普通" : "低め";
+
+    return [
+      `このデッキは ${style}`,
+      `AoE耐性は ${aoeRes}`,
+      `Air耐性は ${airRes}`,
+      `サイクル速度は ${speed}`,
+    ];
+  }, [data, averageElixir]);
+
+  const strengths = useMemo(() => {
+    if (!data) return [];
+    const xs: string[] = [];
+    const countTrait = (keyIncludes: string) =>
+      data.deck_traits
+        .filter((t) => t.trait_key.includes(keyIncludes))
+        .reduce((sum, t) => sum + t.count, 0);
+
+    const air = countTrait("anti_air") + countTrait("air");
+    const aoe = countTrait("aoe");
+    const winCon = countTrait("win_condition");
+
+    if (air >= 3) xs.push("Airへの対応力が高い");
+    if (aoe >= 3) xs.push(`AoEを${aoe}枚持つ`);
+    if (winCon >= 2) xs.push(`Win Conditionが${winCon}枚`);
+    if (averageElixir != null && averageElixir <= 3.3) xs.push("回転が速く主導権を取りやすい");
+    if (xs.length < 3) xs.push("カード役割の重複が少なく安定しやすい");
+    return xs.slice(0, 3);
+  }, [data, averageElixir]);
+
+  const weaknesses = useMemo(() => {
+    if (!data) return [];
+    const xs: string[] = [];
+    const countTrait = (keyIncludes: string) =>
+      data.deck_traits
+        .filter((t) => t.trait_key.includes(keyIncludes))
+        .reduce((sum, t) => sum + t.count, 0);
+    const classCount = (keyIncludes: string) =>
+      data.deck_classes
+        .filter((c) => c.class_key.includes(keyIncludes))
+        .reduce((sum, c) => sum + c.count, 0);
+
+    const stunResist = countTrait("stun_resist") + countTrait("immobilize_resist");
+    const antiSwarm = countTrait("aoe") + countTrait("splash");
+    const building = classCount("building");
+
+    if (stunResist === 0) xs.push("Immobilizeに弱い可能性がある");
+    if (antiSwarm <= 1) xs.push("Swarm対策が薄い");
+    if (building === 0) xs.push("受けの建物が少ない");
+    if (averageElixir != null && averageElixir >= 4.3) xs.push("重め構成で受け遅れリスクがある");
+    if (xs.length < 3) xs.push("同系統マッチで後手になりやすい");
+    return xs.slice(0, 3);
+  }, [data, averageElixir]);
 
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
@@ -150,10 +218,8 @@ export default function HomePage() {
       <SyncCard />
 
       <SectionCard>
-        <div className="text-sm font-semibold text-slate-900">Deck identity</div>
-        <div className="mt-1 text-xs text-slate-500">
-          Understand what this deck is before reading counters/threats.
-        </div>
+        <div className="text-sm font-semibold text-slate-900">デッキの性格（5秒サマリー）</div>
+        <div className="mt-1 text-xs text-slate-500">改善前に、まずこのデッキの現在地を1画面で把握します。</div>
 
         {err ? (
           <div className="mt-3">
@@ -165,96 +231,110 @@ export default function HomePage() {
 
         {!loading && !err && data ? (
           <div className="mt-4 space-y-4">
-            <div>
-              <div className="text-xs text-slate-500">Traits</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {data.deck_traits.length === 0 ? (
-                  <div className="text-sm text-slate-600">No traits.</div>
-                ) : (
-                  data.deck_traits.map((t) => (
-                    <span
-                      key={t.trait_key}
-                      className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
-                    >
-                      {prettyKey(t.trait_key)} · {t.count}
-                    </span>
-                  ))
-                )}
-              </div>
+            <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+              {deckIdentityLines.map((line) => (
+                <div key={line}>- {line}</div>
+              ))}
             </div>
 
             <div>
-              <div className="text-xs text-slate-500">Classes</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {data.deck_classes.length === 0 ? (
-                  <div className="text-sm text-slate-600">No classes.</div>
-                ) : (
-                  data.deck_classes.map((c) => (
-                    <span
-                      key={c.class_key}
-                      className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
-                    >
-                      {prettyKey(c.class_key)} · {c.count}
-                    </span>
-                  ))
-                )}
-              </div>
+              <div className="text-xs font-semibold text-slate-700">強み（3つ）</div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {strengths.map((s) => (
+                  <li key={s}>✓ {s}</li>
+                ))}
+              </ul>
             </div>
 
             <div>
-              <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                <span>Cards</span>
-                <span>avg elixir {averageElixir ?? "-"}</span>
-              </div>
-              <div className="mt-2 space-y-2">
-                {mergedCards.length === 0 ? (
-                  <div className="text-sm text-slate-600">No cards in this summary.</div>
-                ) : (
-                  mergedCards.map((c) => {
-                    const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
-                    const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+              <div className="text-xs font-semibold text-slate-700">弱み（3つ）</div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {weaknesses.map((w) => (
+                  <li key={w}>⚠ {w}</li>
+                ))}
+              </ul>
+            </div>
 
-                    return (
-                      <div
-                        key={`${c.card_id}:${c.slot_kind}`}
-                        className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 shrink-0">
-                            {icon ? (
-                              <img src={icon} alt="" className="h-full w-full object-contain" loading="lazy" />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
-                            <div className="mt-0.5 text-xs text-slate-500">
-                              slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
+            <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">詳細（traits / classes / cards）</summary>
+              <div className="mt-3 space-y-4">
+                <div>
+                  <div className="text-xs text-slate-500">Traits</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {data.deck_traits.length === 0 ? (
+                      <div className="text-sm text-slate-600">No traits.</div>
+                    ) : (
+                      data.deck_traits.map((t) => (
+                        <span
+                          key={t.trait_key}
+                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
+                        >
+                          {prettyKey(t.trait_key)} · {t.count}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-500">Classes</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {data.deck_classes.length === 0 ? (
+                      <div className="text-sm text-slate-600">No classes.</div>
+                    ) : (
+                      data.deck_classes.map((c) => (
+                        <span
+                          key={c.class_key}
+                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
+                        >
+                          {prettyKey(c.class_key)} · {c.count}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                    <span>Cards</span>
+                    <span>avg elixir {averageElixir ?? "-"}</span>
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {mergedCards.length === 0 ? (
+                      <div className="text-sm text-slate-600">No cards in this summary.</div>
+                    ) : (
+                      mergedCards.map((c) => {
+                        const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+                        const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+
+                        return (
+                          <div
+                            key={`${c.card_id}:${c.slot_kind}`}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 shrink-0">
+                                {icon ? (
+                                  <img src={icon} alt="" className="h-full w-full object-contain" loading="lazy" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
+                                <div className="mt-0.5 text-xs text-slate-500">
+                                  slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="mt-2 grid gap-1 text-xs">
-                          <div>
-                            <span className="text-slate-500">traits:</span>{" "}
-                            <span className="text-slate-700">
-                              {c.card_traits.length ? c.card_traits.map(prettyKey).join(", ") : "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">classes:</span>{" "}
-                            <span className="text-slate-700">
-                              {c.classes.length ? c.classes.map(prettyKey).join(", ") : "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            </details>
           </div>
         ) : null}
       </SectionCard>
