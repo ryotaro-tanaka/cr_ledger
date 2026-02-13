@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import BottomNav from "./components/BottomNav";
-import HomePage from "./pages/HomePage";
+import Overview from "./pages/Overview";
 import ImprovePage from "./pages/ImprovePage";
 import SettingsPage from "./pages/SettingsPage";
 import { useSelection } from "./lib/selection";
@@ -25,7 +25,7 @@ export default function App() {
             path="/"
             element={
               <RequireSelection>
-                <HomePage />
+                <Overview />
               </RequireSelection>
             }
           />

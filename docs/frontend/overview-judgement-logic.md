@@ -1,6 +1,6 @@
 # Overview 判定ロジック（frontend）
 
-本ドキュメントは `frontend/src/pages/HomePage.tsx` の Overview 判定ロジックを説明します。
+本ドキュメントは `frontend/src/pages/Overview.tsx` の Overview 判定ロジックを説明します。
 
 ## 基準ドキュメント
 
