@@ -8,6 +8,16 @@ import { getDeckSummary } from "../api/api";
 import type { DeckSummaryResponse } from "../api/types";
 import { useCardMaster } from "../cards/useCardMaster";
 import { toErrorText } from "../lib/errors";
+import { useCommonPlayers } from "../lib/commonPlayers";
+
+type MergedCard = {
+  slot: number | null;
+  card_id: number;
+  slot_kind: "normal" | "evolution" | "hero" | "support";
+  card_type: "unit" | "spell" | "building" | "support" | null;
+  card_traits: string[];
+  classes: string[];
+};
 
 function prettyKey(k: string): string {
   return k
@@ -20,6 +30,7 @@ export default function HomePage() {
   const nav = useNavigate();
   const { player, deckKey } = useSelection();
   const { master, loading: cardsLoading, error: cardsError } = useCardMaster();
+  const { data: playersData } = useCommonPlayers();
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -57,9 +68,48 @@ export default function HomePage() {
     };
   }, [deckKey]);
 
-  const sortedCards = useMemo(() => {
-    return [...(data?.cards ?? [])].sort((a, b) => a.card_id - b.card_id);
-  }, [data]);
+  const selectedDeckBase = useMemo(() => {
+    const selectedPlayer = playersData?.players.find((p) => p.player_tag === player?.player_tag);
+    return selectedPlayer?.decks.find((d) => d.my_deck_key === deckKey) ?? null;
+  }, [playersData, player?.player_tag, deckKey]);
+
+  const mergedCards = useMemo<MergedCard[]>(() => {
+    const baseCards = selectedDeckBase?.cards ?? [];
+    const summaryCards = data?.cards ?? [];
+
+    const byKey = new Map<string, MergedCard>();
+
+    for (const c of baseCards) {
+      byKey.set(`${c.card_id}:${c.slot_kind}`, {
+        slot: c.slot,
+        card_id: c.card_id,
+        slot_kind: c.slot_kind,
+        card_type: null,
+        card_traits: [],
+        classes: [],
+      });
+    }
+
+    for (const c of summaryCards) {
+      const k = `${c.card_id}:${c.slot_kind}`;
+      const prev = byKey.get(k);
+      byKey.set(k, {
+        slot: prev?.slot ?? null,
+        card_id: c.card_id,
+        slot_kind: c.slot_kind,
+        card_type: c.card_type,
+        card_traits: c.card_traits,
+        classes: c.classes,
+      });
+    }
+
+    return [...byKey.values()].sort((a, b) => {
+      const aSlot = a.slot ?? Number.MAX_SAFE_INTEGER;
+      const bSlot = b.slot ?? Number.MAX_SAFE_INTEGER;
+      if (aSlot !== bSlot) return aSlot - bSlot;
+      return a.card_id - b.card_id;
+    });
+  }, [selectedDeckBase, data]);
 
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
@@ -142,10 +192,10 @@ export default function HomePage() {
             <div>
               <div className="text-xs text-slate-500">Cards</div>
               <div className="mt-2 space-y-2">
-                {sortedCards.length === 0 ? (
+                {mergedCards.length === 0 ? (
                   <div className="text-sm text-slate-600">No cards in this summary.</div>
                 ) : (
-                  sortedCards.map((c) => {
+                  mergedCards.map((c) => {
                     const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
                     const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
 
@@ -165,7 +215,7 @@ export default function HomePage() {
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
                             <div className="mt-0.5 text-xs text-slate-500">
-                              {c.slot_kind} · {c.card_type}
+                              slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"}
                             </div>
                           </div>
                         </div>
