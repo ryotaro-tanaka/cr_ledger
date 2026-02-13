@@ -119,3 +119,14 @@ export type TrendTraitsResponse = ApiBaseOk & {
     summary: { mean_count: number; rate_ge_2: number };
   }>;
 };
+
+export type TrendWinConditionsResponse = ApiBaseOk & {
+  filter: { last: number };
+  no_win_condition_points: number;
+  total_points: number;
+  cards: Array<{
+    card_id: number;
+    slot_kind: SlotKind;
+    fractional_points: number;
+  }>;
+};

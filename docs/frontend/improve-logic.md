@@ -7,43 +7,56 @@ This document explains how `frontend/src/pages/ImprovePage.tsx` builds Improve U
 - `GET /api/decks/{my_deck_key}/offense/counters`
 - `GET /api/decks/{my_deck_key}/defense/threats`
 - `GET /api/trend/{player_tag}/traits`
+- `GET /api/decks/{my_deck_key}/summary`
+- `GET /api/trend/win-conditions?player_tag=...&last=200`
 
-All three are fetched in parallel after player/deck are selected.
+All endpoints are fetched in parallel after player/deck are selected.
+
+## Information architecture (fixed 3 blocks)
+
+1. **Issue**: one priority conclusion
+2. **Why**: one chart area (tabbed)
+3. **Action**: 2-3 non-card-specific plans
 
 ## Main flow
 
-1. **Primary issue (single highest priority)**
-   - Candidate A: top offense trait
-   - Candidate B: top defense threat card
-   - Compare by `threat_score`
-   - Tie-break by `encounter_rate` when threat score is equal
-   - Highest one becomes `primaryIssue`
-   - UI also shows source (`offense` / `defense`) and a non-causal action hint
+### 1) Issue selection
 
-2. **Improvement plans (max 3)**
-   - Add AoE plan when trend suggests swarm/bait pressure
-   - Add building plan when top defense threat exists
-   - Add stun/immobilize rebalance plan when offense top trait suggests it
-   - If no plan can be generated, add replay-review fallback plan
-   - Sort plans by priority score (mainly encounter / trend rate) and keep top 3
+- Build attack issue from `offense.counters.traits`.
+- Build defense issue from `defense.threats`.
+- Do **not** compare offense trait and defense card directly in one candidate list.
+- Compute unified score for both sides:
 
-3. **Next candidates**
-   - Show up to 2 lower-priority candidates from top defense card / top trend trait
+`expected_loss = battles_with_element * max(0, baseline_win_rate - win_rate_given)`
 
-## UI behavior
+- Exclude always-on traits from issue candidates (`encounter_rate > 0.85`).
+- Pick top attack issue by expected loss.
+- Pick top defense issue by expected loss.
+- Final priority (`Attack` or `Defense`) is whichever has larger expected loss.
 
-- Step 1 shows one issue, risk bar, and key numbers.
-- Win-rate delta is shown with sign (`+/-`) for readability.
-- Step 2 shows up to 3 plan cards with decision buttons:
-  - "この方向で検討する" sets that plan to **considering** state
-  - "今は保留する" sets that plan to **on hold** state
-- The chosen considering plan is pinned as a short "3〜5戦で試す" reminder.
-- If nothing is selected but hold items exist, hold count is shown.
-- Each plan includes one-line decision cue (what to compare first) and current state label.
-- Supporting numbers stay in `<details>` to reduce cognitive load.
-- Copy explicitly keeps non-causal phrasing (correlation-based suggestion).
+### 2) Why (evidence)
+
+- Tab A: `環境×攻め阻害` scatter for offense traits.
+  - X: trend `mean_count`
+  - Y: `max(0, baseline_win_rate - win_rate_given)`
+  - Dot size: `battles_with_element`
+- Tab B: `守り脅威` bar chart for top defense cards.
+  - Value: expected loss
+  - Sub-info: encounter rate
+- Small background line: trend win-condition top 3.
+
+### 3) Action generation
+
+- Action plans are generated only when deck summary suggests shortage.
+- Use `summary.deck_traits` / `summary.cards` as shortage checks.
+- Plans are category-level wording (non-causal, non card-fixed), e.g.:
+  - action cancel resistance
+  - AoE category
+  - receiving options against building-focused pressure
+- Show up to 3 plans.
+- CTA `この方針で検討` pins one plan as memo.
 
 ## Notes
 
 - This is a decision-support heuristic, not a causal model.
-- Thresholds and wording are intentionally simple for quick action.
+- Copy intentionally avoids causal certainty.
