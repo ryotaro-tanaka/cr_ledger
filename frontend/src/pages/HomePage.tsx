@@ -127,13 +127,32 @@ export default function HomePage() {
       data.deck_traits
         .filter((t) => t.trait_key.includes(keyIncludes))
         .reduce((sum, t) => sum + t.count, 0);
+    const classCount = (keyIncludes: string) =>
+      data.deck_classes
+        .filter((c) => c.class_key.includes(keyIncludes))
+        .reduce((sum, c) => sum + c.count, 0);
 
-    const winConCount = traitCount("win_condition");
+    const winConCount = classCount("win_condition");
     const aoeCount = traitCount("aoe");
-    const airCount = traitCount("anti_air") + traitCount("air");
+    const airCount = classCount("anti_air") + traitCount("air");
+    const buildingCount = classCount("building");
+    const swarmLikeCount = traitCount("swarm");
+
+    // Based on docs/deck_type.md archetype definitions (Cycle/Bait/Beatdown/Control/Siege/Bridge Spam).
+    const style =
+      minimumElixirCycle != null && minimumElixirCycle <= 9
+        ? "Cycle寄り"
+        : minimumElixirCycle != null && minimumElixirCycle >= 13
+          ? "Beatdown寄り"
+          : buildingCount >= 2
+            ? "Siege寄り"
+            : winConCount >= 2 && buildingCount === 0
+              ? "Bridge Spam寄り"
+              : swarmLikeCount >= 2
+                ? "Bait寄り"
+                : "Control寄り";
 
     const speed = minimumElixirCycle == null ? "不明" : minimumElixirCycle <= 9 ? "高速" : minimumElixirCycle <= 12 ? "中速" : "低速";
-    const style = winConCount >= 2 ? "Bridge Spam寄り" : aoeCount >= 3 ? "Control寄り" : "Balanced寄り";
     const aoeRes = aoeCount >= 4 ? "高め" : aoeCount >= 2 ? "普通" : "低め";
     const airRes = airCount >= 3 ? "高め" : airCount >= 1 ? "普通" : "低め";
 
@@ -152,10 +171,14 @@ export default function HomePage() {
       data.deck_traits
         .filter((t) => t.trait_key.includes(keyIncludes))
         .reduce((sum, t) => sum + t.count, 0);
+    const countClass = (keyIncludes: string) =>
+      data.deck_classes
+        .filter((c) => c.class_key.includes(keyIncludes))
+        .reduce((sum, c) => sum + c.count, 0);
 
-    const air = countTrait("anti_air") + countTrait("air");
+    const air = countClass("anti_air") + countTrait("air");
     const aoe = countTrait("aoe");
-    const winCon = countTrait("win_condition");
+    const winCon = countClass("win_condition");
 
     if (air >= 3) xs.push("Airへの対応力が高い");
     if (aoe >= 3) xs.push(`AoEを${aoe}枚持つ`);
@@ -172,14 +195,14 @@ export default function HomePage() {
       data.deck_traits
         .filter((t) => t.trait_key.includes(keyIncludes))
         .reduce((sum, t) => sum + t.count, 0);
-    const classCount = (keyIncludes: string) =>
+    const countClass = (keyIncludes: string) =>
       data.deck_classes
         .filter((c) => c.class_key.includes(keyIncludes))
         .reduce((sum, c) => sum + c.count, 0);
 
     const stunResist = countTrait("stun_resist") + countTrait("immobilize_resist");
     const antiSwarm = countTrait("aoe") + countTrait("splash");
-    const building = classCount("building");
+    const building = countClass("building");
 
     if (stunResist === 0) xs.push("Immobilizeに弱い可能性がある");
     if (antiSwarm <= 1) xs.push("Swarm対策が薄い");
@@ -212,7 +235,6 @@ export default function HomePage() {
       </div>
 
       {cardsError ? <ApiErrorPanel title="Cards error" detail={cardsError} /> : null}
-
 
       <SectionCard>
         <div className="text-sm font-semibold text-slate-900">デッキの性格（5秒サマリー）</div>
@@ -252,18 +274,77 @@ export default function HomePage() {
               </ul>
             </div>
 
+            <div>
+              <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                <span>Cards</span>
+                <span>最小エリクサーサイクル {minimumElixirCycle ?? "-"}</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {mergedCards.length === 0 ? (
+                  <div className="text-sm text-slate-600">No cards in this summary.</div>
+                ) : (
+                  mergedCards.map((c) => {
+                    const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+                    const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+                    const isWinCondition = c.classes.some((cl) => cl.includes("win_condition"));
+
+                    return (
+                      <details
+                        key={`${c.card_id}:${c.slot_kind}`}
+                        className={`rounded-2xl border px-3 py-2.5 ${isWinCondition ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-white"}`}
+                      >
+                        <summary className="cursor-pointer list-none">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 shrink-0">
+                              {icon ? (
+                                <img src={icon} alt="" className="h-full w-full object-contain" loading="lazy" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
+                                {isWinCondition ? (
+                                  <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">WIN CON</span>
+                                ) : null}
+                              </div>
+                              <div className="mt-0.5 text-xs text-slate-500">
+                                slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
+                              </div>
+                            </div>
+                          </div>
+                        </summary>
+
+                        <div className="mt-2 grid gap-1 text-xs">
+                          <div>
+                            <span className="text-slate-500">traits:</span>{" "}
+                            <span className="text-slate-700">{c.card_traits.length ? c.card_traits.map(prettyKey).join(", ") : "-"}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">classes:</span>{" "}
+                            <span className="text-slate-700">{c.classes.length ? c.classes.map(prettyKey).join(", ") : "-"}</span>
+                          </div>
+                        </div>
+                      </details>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
             <details className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <summary className="cursor-pointer text-xs font-semibold text-slate-600">この判定のルール</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
-                <li>Control / Bridge Spam / Balanced は win_condition 枚数と aoe 枚数で判定。</li>
-                <li>AoE耐性・Air耐性は trait 内の該当キーワードの合計枚数で判定。</li>
+                <li>デッキタイプ判定は docs/deck_type.md の6分類（Cycle/Bait/Beatdown/Control/Siege/Bridge Spam）を基準にした近似ルール。</li>
+                <li>AoE耐性・Air耐性は trait/class 内の該当キーワードの合計枚数で判定。</li>
                 <li>サイクル速度は slot0-7 のカードから最小4枚の elixir 合計（最小エリクサーサイクル）で判定。</li>
                 <li>強み・弱みは上記指標の閾値判定で最大3件を表示。</li>
               </ul>
             </details>
 
             <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-600">詳細（traits / classes / cards）</summary>
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">詳細（traits / classes）</summary>
               <div className="mt-3 space-y-4">
                 <div>
                   <div className="text-xs text-slate-500">Traits</div>
@@ -297,46 +378,6 @@ export default function HomePage() {
                           {prettyKey(c.class_key)} · {c.count}
                         </span>
                       ))
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                    <span>Cards</span>
-                    <span>最小エリクサーサイクル {minimumElixirCycle ?? "-"}</span>
-                  </div>
-                  <div className="mt-2 space-y-2">
-                    {mergedCards.length === 0 ? (
-                      <div className="text-sm text-slate-600">No cards in this summary.</div>
-                    ) : (
-                      mergedCards.map((c) => {
-                        const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
-                        const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
-
-                        return (
-                          <div
-                            key={`${c.card_id}:${c.slot_kind}`}
-                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 shrink-0">
-                                {icon ? (
-                                  <img src={icon} alt="" className="h-full w-full object-contain" loading="lazy" />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
-                                <div className="mt-0.5 text-xs text-slate-500">
-                                  slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
                     )}
                   </div>
                 </div>
