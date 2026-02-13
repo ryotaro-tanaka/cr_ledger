@@ -114,7 +114,7 @@ export default function HomePage() {
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
       <div className="space-y-1">
-        <div className="text-[22px] font-semibold tracking-tight text-slate-900">Deck Summary</div>
+        <div className="text-[22px] font-semibold tracking-tight text-slate-900">Overview</div>
         <div className="text-xs text-slate-500">{playerLabel}</div>
 
         {!player || !deckKey ? (

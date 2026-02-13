@@ -126,3 +126,44 @@ export type DeckSummaryResponse = ApiBaseOk & {
     classes: string[];
   }>;
 };
+
+type ImpactStats = {
+  battles_with_element: number;
+  encounter_rate: number;
+  win_rate_given: number;
+  delta_vs_baseline: number;
+  threat_score: number;
+};
+
+export type DeckOffenseCountersResponse = ApiBaseOk & {
+  filter: { seasons: number };
+  summary: {
+    total_battles: number;
+    baseline_win_rate: number;
+    win_condition_cards: Array<{ card_id: number; slot_kind: SlotKind }>;
+  };
+  counters: {
+    cards: Array<{ card_id: number; slot_kind: SlotKind; stats: ImpactStats }>;
+    traits: Array<{ trait_key: string; description: string | null; stats: ImpactStats }>;
+  };
+};
+
+export type DeckDefenseThreatsResponse = ApiBaseOk & {
+  filter: { seasons: number };
+  summary: {
+    total_battles: number;
+    baseline_win_rate: number;
+  };
+  threats: Array<{ card_id: number; slot_kind: SlotKind; stats: ImpactStats }>;
+};
+
+export type TrendTraitsResponse = ApiBaseOk & {
+  filter: { seasons: number };
+  total_battles: number;
+  deck_size: number;
+  traits: Array<{
+    trait_key: string;
+    distribution: Array<{ count: number; battles: number; rate: number }>;
+    summary: { mean_count: number; rate_ge_2: number };
+  }>;
+};

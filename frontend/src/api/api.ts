@@ -8,6 +8,9 @@ import type {
   MatchupByCardResponse,
   MyDeckCardsResponse,
   DeckSummaryResponse,
+  DeckOffenseCountersResponse,
+  DeckDefenseThreatsResponse,
+  TrendTraitsResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -85,7 +88,7 @@ export function getPlayers(last = 200): Promise<PlayersResponse> {
 }
 
 export function sync(playerTag: string): Promise<SyncResponse> {
-  return request<SyncResponse>("/api/sync", { method: "POST", params: { player_tag: playerTag } });
+  return request<SyncResponse>("/api/common/sync", { method: "POST", body: { player_tag: playerTag } });
 }
 
 export function getMyDecks(playerTag: string, last: number): Promise<MyDecksResponse> {
@@ -131,4 +134,22 @@ export function updateDeckName(myDeckKey: string, deckName: string): Promise<{ o
 
 export function getDeckSummary(myDeckKey: string): Promise<DeckSummaryResponse> {
   return request<DeckSummaryResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/summary`);
+}
+
+export function getDeckOffenseCounters(myDeckKey: string, seasons = 2): Promise<DeckOffenseCountersResponse> {
+  return request<DeckOffenseCountersResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/offense/counters`, {
+    params: { seasons },
+  });
+}
+
+export function getDeckDefenseThreats(myDeckKey: string, seasons = 2): Promise<DeckDefenseThreatsResponse> {
+  return request<DeckDefenseThreatsResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/defense/threats`, {
+    params: { seasons },
+  });
+}
+
+export function getTrendTraits(playerTag: string, seasons = 2): Promise<TrendTraitsResponse> {
+  return request<TrendTraitsResponse>(`/api/trend/${encodeURIComponent(playerTag)}/traits`, {
+    params: { seasons },
+  });
 }

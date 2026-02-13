@@ -2,9 +2,7 @@ import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import BottomNav from "./components/BottomNav";
 import HomePage from "./pages/HomePage";
-import PriorityPage from "./pages/PriorityPage";
-import MatchupPage from "./pages/MatchupPage";
-import TrendPage from "./pages/TrendPage";
+import ImprovePage from "./pages/ImprovePage";
 import SettingsPage from "./pages/SettingsPage";
 import { useSelection } from "./lib/selection";
 
@@ -32,29 +30,17 @@ export default function App() {
             }
           />
           <Route
-            path="/priority"
+            path="/improve"
             element={
               <RequireSelection>
-                <PriorityPage />
+                <ImprovePage />
               </RequireSelection>
             }
           />
-          <Route
-            path="/matchup"
-            element={
-              <RequireSelection>
-                <MatchupPage />
-              </RequireSelection>
-            }
-          />
-          <Route
-            path="/trend"
-            element={
-              <RequireSelection>
-                <TrendPage />
-              </RequireSelection>
-            }
-          />
+
+          <Route path="/priority" element={<Navigate to="/improve" replace />} />
+          <Route path="/matchup" element={<Navigate to="/improve" replace />} />
+          <Route path="/trend" element={<Navigate to="/improve" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
