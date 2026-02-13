@@ -16,13 +16,16 @@ All three are fetched in parallel after player/deck are selected.
    - Candidate A: top offense trait
    - Candidate B: top defense threat card
    - Compare by `threat_score`
+   - Tie-break by `encounter_rate` when threat score is equal
    - Highest one becomes `primaryIssue`
+   - UI also shows source (`offense` / `defense`) and a non-causal action hint
 
 2. **Improvement plans (max 3)**
    - Add AoE plan when trend suggests swarm/bait pressure
    - Add building plan when top defense threat exists
    - Add stun/immobilize rebalance plan when offense top trait suggests it
    - If no plan can be generated, add replay-review fallback plan
+   - Sort plans by priority score (mainly encounter / trend rate) and keep top 3
 
 3. **Next candidates**
    - Show up to 2 lower-priority candidates from top defense card / top trend trait
@@ -30,9 +33,12 @@ All three are fetched in parallel after player/deck are selected.
 ## UI behavior
 
 - Step 1 shows one issue, risk bar, and key numbers.
+- Win-rate delta is shown with sign (`+/-`) for readability.
 - Step 2 shows up to 3 plan cards with simple decision buttons:
   - "この方向で検討する"
   - "今は保留"
+- When selected, the chosen plan is pinned as a short "3〜5戦で試行" reminder.
+- Each plan includes one-line decision cue (what to compare first).
 - Supporting numbers stay in `<details>` to reduce cognitive load.
 - Copy explicitly keeps non-causal phrasing (correlation-based suggestion).
 

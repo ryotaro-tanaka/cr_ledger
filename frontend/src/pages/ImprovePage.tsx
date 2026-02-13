@@ -23,6 +23,11 @@ function pct(v: number): string {
   return `${Math.round(v * 1000) / 10}%`;
 }
 
+function signedPct(v: number): string {
+  const raw = Math.round(v * 1000) / 10;
+  return `${raw > 0 ? "+" : ""}${raw}%`;
+}
+
 function riskTone(score: number): "高" | "中" | "低" {
   if (score >= 0.2) return "高";
   if (score >= 0.08) return "中";
@@ -88,20 +93,24 @@ export default function ImprovePage() {
     const candidates: Array<{
       key: string;
       label: string;
+      source: "offense" | "defense";
       encounter: number;
       delta: number;
       threat: number;
       details: string;
+      actionHint: string;
     }> = [];
 
     if (topOffenseTrait) {
       candidates.push({
         key: `off-trait-${topOffenseTrait.trait_key}`,
         label: prettyKey(topOffenseTrait.trait_key),
+        source: "offense",
         encounter: topOffenseTrait.stats.encounter_rate,
         delta: topOffenseTrait.stats.delta_vs_baseline,
         threat: topOffenseTrait.stats.threat_score,
         details: "攻めで止められやすい傾向",
+        actionHint: "攻め筋の通りやすさを上げる候補を優先",
       });
     }
     if (topDefenseCard) {
@@ -109,25 +118,29 @@ export default function ImprovePage() {
       candidates.push({
         key: `def-card-${topDefenseCard.card_id}`,
         label: name,
+        source: "defense",
         encounter: topDefenseCard.stats.encounter_rate,
         delta: topDefenseCard.stats.delta_vs_baseline,
         threat: topDefenseCard.stats.threat_score,
         details: "守りで崩れやすい相手",
+        actionHint: "受け先・回し方を明確化する候補を優先",
       });
     }
 
-    candidates.sort((a, b) => b.threat - a.threat);
+    candidates.sort((a, b) => b.threat - a.threat || b.encounter - a.encounter);
     return candidates[0] ?? null;
   }, [topOffenseTrait, topDefenseCard, master]);
 
   const plans = useMemo(() => {
-    const xs: Array<{ id: string; title: string; reason: string }> = [];
+    const xs: Array<{ id: string; title: string; reason: string; score: number; cue: string }> = [];
 
     if (topTrendTrait?.trait_key.includes("swarm") || topTrendTrait?.trait_key.includes("bait")) {
       xs.push({
         id: "plan-aoe",
         title: "AoEを1枚増やす",
         reason: `環境で ${prettyKey(topTrendTrait.trait_key)} が目立つため（2枚以上率 ${pct(topTrendTrait.summary.rate_ge_2)}）`,
+        score: topTrendTrait.summary.rate_ge_2,
+        cue: "呪文1枚の置き換え候補を先に比較",
       });
     }
 
@@ -136,6 +149,8 @@ export default function ImprovePage() {
         id: "plan-building",
         title: "建物を追加する",
         reason: `${master?.getName(topDefenseCard.card_id) ?? `#${topDefenseCard.card_id}`} への受けを明確化する`,
+        score: topDefenseCard.stats.encounter_rate,
+        cue: "高コスト枠との入れ替えを優先確認",
       });
     }
 
@@ -144,6 +159,8 @@ export default function ImprovePage() {
         id: "plan-cycle",
         title: "Stun対策比率を見直す",
         reason: `${prettyKey(topOffenseTrait.trait_key)} の遭遇率 ${pct(topOffenseTrait.stats.encounter_rate)} を見て再配分を検討候補にする`,
+        score: topOffenseTrait.stats.encounter_rate,
+        cue: "勝ち筋ユニットを減らしすぎない範囲で調整",
       });
     }
 
@@ -152,11 +169,15 @@ export default function ImprovePage() {
         id: "plan-replay",
         title: "直近リプレイから崩れ方を1つ特定する",
         reason: "攻め失敗1回・守り失敗1回だけ抽出して、差し替え候補を決める",
+        score: 0,
+        cue: "2試合だけ見て判断を固定しすぎない",
       });
     }
 
-    return xs.slice(0, 3);
+    return xs.sort((a, b) => b.score - a.score).slice(0, 3);
   }, [topTrendTrait, topDefenseCard, topOffenseTrait, master]);
+
+  const selectedPlanData = useMemo(() => plans.find((p) => p.id === selectedPlan) ?? null, [plans, selectedPlan]);
 
   const nextCandidates = useMemo(() => {
     const xs: string[] = [];
@@ -183,10 +204,13 @@ export default function ImprovePage() {
               <div className="mt-3 space-y-2">
                 <div className="text-base font-semibold text-slate-900">最大リスク：{primaryIssue.label}</div>
                 <div className="text-xs text-slate-600">{primaryIssue.details}</div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  先に見る理由：{primaryIssue.source === "offense" ? "攻め" : "守り"}側で脅威スコアが最大（{riskTone(primaryIssue.threat)}）。{primaryIssue.actionHint}
+                </div>
                 <RiskBar value={primaryIssue.encounter} />
                 <div className="grid grid-cols-3 gap-2 text-xs text-slate-700">
                   <div>遭遇率: {pct(primaryIssue.encounter)}</div>
-                  <div>勝率差: {pct(primaryIssue.delta)}</div>
+                  <div>勝率差: {signedPct(primaryIssue.delta)}</div>
                   <div>脅威スコア: {riskTone(primaryIssue.threat)}</div>
                 </div>
                 <details className="pt-1 text-xs text-slate-600">
@@ -205,11 +229,17 @@ export default function ImprovePage() {
 
           <SectionCard>
             <div className="text-sm font-semibold text-slate-900">🟦 Step 2：改善候補（最大3）</div>
+            {selectedPlanData ? (
+              <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                選択中：{selectedPlanData.title}（まずは3〜5戦の試行候補）
+              </div>
+            ) : null}
             <div className="mt-3 space-y-3">
               {plans.map((p) => (
                 <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-3">
                   <div className="text-sm font-semibold text-slate-900">{p.title}</div>
                   <div className="mt-1 text-xs text-slate-600">→ {p.reason}</div>
+                  <div className="mt-1 text-[11px] text-slate-500">判断の目安: {p.cue}</div>
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => setSelectedPlan(p.id)}
