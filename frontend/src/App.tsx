@@ -37,10 +37,6 @@ export default function App() {
               </RequireSelection>
             }
           />
-
-          <Route path="/priority" element={<Navigate to="/improve" replace />} />
-          <Route path="/matchup" element={<Navigate to="/improve" replace />} />
-          <Route path="/trend" element={<Navigate to="/improve" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />

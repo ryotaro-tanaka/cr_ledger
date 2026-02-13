@@ -1,12 +1,7 @@
 import type {
-  MyDecksResponse,
-  OpponentTrendResponse,
   PlayersResponse,
-  PriorityResponse,
   RoyaleApiCardsResponse,
   SyncResponse,
-  MatchupByCardResponse,
-  MyDeckCardsResponse,
   DeckSummaryResponse,
   DeckOffenseCountersResponse,
   DeckDefenseThreatsResponse,
@@ -51,7 +46,14 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
   return u.toString();
 }
 
-async function request<T>(path: string, opts?: { method?: "GET" | "POST" | "PATCH"; params?: Record<string, any>; body?: any }): Promise<T> {
+async function request<T>(
+  path: string,
+  opts?: {
+    method?: "GET" | "POST" | "PATCH";
+    params?: Record<string, string | number | boolean | undefined>;
+    body?: unknown;
+  }
+): Promise<T> {
   requireEnv();
   const url = buildUrl(path, opts?.params);
 
@@ -91,38 +93,8 @@ export function sync(playerTag: string): Promise<SyncResponse> {
   return request<SyncResponse>("/api/common/sync", { method: "POST", body: { player_tag: playerTag } });
 }
 
-export function getMyDecks(playerTag: string, last: number): Promise<MyDecksResponse> {
-  return request<MyDecksResponse>("/api/stats/my-decks", { params: { player_tag: playerTag, last } });
-}
-
-export function getOpponentTrendLast(playerTag: string, last: number): Promise<OpponentTrendResponse> {
-  return request<OpponentTrendResponse>("/api/stats/opponent-trend", { params: { player_tag: playerTag, last } });
-}
-
-export function getOpponentTrendSince(playerTag: string, since: string): Promise<OpponentTrendResponse> {
-  return request<OpponentTrendResponse>("/api/stats/opponent-trend", { params: { player_tag: playerTag, since } });
-}
-
-export function getMatchupByCard(playerTag: string, myDeckKey: string, last: number): Promise<MatchupByCardResponse> {
-  return request<MatchupByCardResponse>("/api/stats/matchup-by-card", {
-    params: { player_tag: playerTag, my_deck_key: myDeckKey, last },
-  });
-}
-
-export function getPriority(playerTag: string, myDeckKey: string, last: number): Promise<PriorityResponse> {
-  return request<PriorityResponse>("/api/stats/priority", {
-    params: { player_tag: playerTag, my_deck_key: myDeckKey, last },
-  });
-}
-
 export function getCards(opts?: { nocache?: boolean }): Promise<RoyaleApiCardsResponse> {
   return request<RoyaleApiCardsResponse>("/api/common/cards", { params: { nocache: opts?.nocache ? 1 : undefined } });
-}
-
-export function getMyDeckCards(myDeckKey: string): Promise<MyDeckCardsResponse> {
-  return request<MyDeckCardsResponse>("/api/my-deck-cards", {
-    params: { my_deck_key: myDeckKey },
-  });
 }
 
 export function updateDeckName(myDeckKey: string, deckName: string): Promise<{ ok: true }> {
