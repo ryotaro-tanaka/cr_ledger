@@ -420,7 +420,7 @@ Response schema (200):
 Notes:
 - 1バトル=1サンプル。
 - `trait_count` は相手デッキ内で当該traitが true のカード枚数。
-- trait 判定ルールは Appendix A を参照。
+- trait 判定ルールは `docs/db/notes.md` の「Traits Resolve（API参照）」を参照。
 
 ## GET /api/decks/{my_deck_key}/matchups/by-traits
 
@@ -554,7 +554,7 @@ Response schema (200):
 
 Notes:
 - 戦績・トレンド・勝率などの動的集計は含まない。
-- trait 判定ルールは Appendix A を参照。
+- trait 判定ルールは `docs/db/notes.md` の「Traits Resolve（API参照）」を参照。
 
 ## GET /api/decks/{my_deck_key}/offense/counters
 
@@ -643,7 +643,7 @@ Response schema (200):
 Notes:
 - 因果を保証しない統計的関連。
 - `encounter_rate` と `delta_vs_baseline` の併記で解釈する。
-- 集計定義の詳細は Appendix B を参照。
+- 集計定義の詳細は `docs/db/notes.md` の「集計系APIの定義（API参照）」を参照。
 
 ## GET /api/decks/{my_deck_key}/defense/threats
 
@@ -709,38 +709,6 @@ Notes:
 - 主対象は相手の win_condition（最小実装）。
 - 並び順は `threat_score DESC` → `delta_vs_baseline ASC` → `battles_with_element DESC`。
 
-## Appendix A: Traits Resolve（実装詳細）
+## 関連ドキュメント
 
-運用向け本文から分離した、trait 解決ロジックの実装寄り詳細です。
-
-- Base traits: `card_traits` 固定カラム（`is_air`, `can_damage_air`, `primary_target_buildings`, `is_aoe`, `is_swarm_like`）
-- KV traits: `card_trait_kv.trait_key`（例: `stun`, `slowdown`, `inferno`, `knockback`）
-
-Resolve 手順:
-1. Base traits を `card_traits` から評価し、true のみ採用。
-2. KV traits を `card_trait_kv` から採用（優先度: `slot_kind` 一致 > `all`）。
-3. Base traits 名と同じ `trait_key` が `slot_kind` 行にある場合は上書き（true なら追加、false なら除外）。
-
-例:
-- `card_traits.is_aoe = 0` かつ上書きなし → `is_aoe` は含まれない。
-- `card_traits.is_aoe = 0` だが `('evolution','is_aoe',1)` あり → `is_aoe` を含める。
-- `stun` が `all` で付与される → `stun` を含める。
-
-## Appendix B: 集計系APIの定義（実装詳細）
-
-`/api/decks/{my_deck_key}/offense/counters` と `/api/decks/{my_deck_key}/defense/threats` の共通定義。
-
-- 対象バトル集合: `my_deck_key` 一致 + 必要に応じて `seasons` 期間フィルタ。`draw` は除外。
-- `baseline_win_rate`: 対象集合での勝率。
-- `battles_with_element`: 相手デッキに要素が含まれた試合数。
-- `encounter_rate = battles_with_element / total_battles`
-- `win_rate_given`: 要素を含む試合に限った勝率。
-- `delta_vs_baseline = win_rate_given - baseline_win_rate`
-- `threat_score = encounter_rate * max(0, baseline_win_rate - win_rate_given)`
-
-主な参照テーブル（実装観点）:
-- `battles`
-- `battle_opponent_cards`
-- `card_traits`
-- `card_trait_kv` / `trait_keys`
-- `card_classes`
+- Traits Resolve / 集計系APIの実装詳細は `docs/db/notes.md` を参照。

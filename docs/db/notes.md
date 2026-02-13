@@ -40,15 +40,51 @@
 
 以下のファイル・ディレクトリに DB 設計や実データのサンプルをまとめています。実装や解析に参照してください。
 
-- [docs/db/schema.md](docs/db/schema.md)  
+- [docs/db/schema.md](docs/db/schema.md)
   テーブル定義・カラムの意味・制約・インデックスの解説（主ドキュメント）。PRAGMA 出力は末尾に追記しています。
 
-- [docs/db/schema.er.md](docs/db/schema.er.md)  
+- [docs/db/schema.er.md](docs/db/schema.er.md)
   Mermaid による ER 図（構造の見通し用）。
 
-- [docs/db/sample.md](docs/db/sample.md)  
+- [docs/db/sample.md](docs/db/sample.md)
   各テーブルの実データ例（最大5行）を CSV 形式で示したサンプル。スキーマ理解やクエリ検証に便利です。
 
-- docs/db/seeds/  
+- docs/db/seeds/
   手入力で用意した分析向けの実データ（CSV 等）を保存するディレクトリ。テスト・手動検証やシード投入用の素材が含まれます。公開前に含まれるデータの確認を推奨します。
-  
+
+
+## Traits Resolve（API参照）
+
+`/api/trend/{player_tag}/traits` と `/api/decks/{my_deck_key}/summary` などで使う trait 解決ルール。
+
+- Base traits: `card_traits` 固定カラム（`is_air`, `can_damage_air`, `primary_target_buildings`, `is_aoe`, `is_swarm_like`）
+- KV traits: `card_trait_kv.trait_key`（例: `stun`, `slowdown`, `inferno`, `knockback`）
+
+Resolve 手順:
+1. Base traits を `card_traits` から評価し、true のみ採用。
+2. KV traits を `card_trait_kv` から採用（優先度: `slot_kind` 一致 > `all`）。
+3. Base traits 名と同じ `trait_key` が `slot_kind` 行にある場合は上書き（true なら追加、false なら除外）。
+
+例:
+- `card_traits.is_aoe = 0` かつ上書きなし → `is_aoe` は含まれない。
+- `card_traits.is_aoe = 0` だが `('evolution','is_aoe',1)` あり → `is_aoe` を含める。
+- `stun` が `all` で付与される → `stun` を含める。
+
+## 集計系APIの定義（API参照）
+
+`/api/decks/{my_deck_key}/offense/counters` と `/api/decks/{my_deck_key}/defense/threats` の共通定義。
+
+- 対象バトル集合: `my_deck_key` 一致 + 必要に応じて `seasons` 期間フィルタ。`draw` は除外。
+- `baseline_win_rate`: 対象集合での勝率。
+- `battles_with_element`: 相手デッキに要素が含まれた試合数。
+- `encounter_rate = battles_with_element / total_battles`
+- `win_rate_given`: 要素を含む試合に限った勝率。
+- `delta_vs_baseline = win_rate_given - baseline_win_rate`
+- `threat_score = encounter_rate * max(0, baseline_win_rate - win_rate_given)`
+
+主な参照テーブル（実装観点）:
+- `battles`
+- `battle_opponent_cards`
+- `card_traits`
+- `card_trait_kv` / `trait_keys`
+- `card_classes`
