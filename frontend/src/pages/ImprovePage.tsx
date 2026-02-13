@@ -23,6 +23,22 @@ function pct(v: number): string {
   return `${Math.round(v * 1000) / 10}%`;
 }
 
+function MiniBar({ label, value, tone = "blue" }: { label: string; value: number; tone?: "red" | "blue" | "green" }) {
+  const ratio = Math.max(0, Math.min(1, value));
+  const barTone = tone === "red" ? "bg-red-500" : tone === "green" ? "bg-green-500" : "bg-blue-500";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[11px] text-slate-600">
+        <span>{label}</span>
+        <span>{pct(value)}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className={`h-full rounded-full ${barTone}`} style={{ width: `${Math.max(ratio * 100, ratio > 0 ? 4 : 0)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export default function ImprovePage() {
   const { player, deckKey } = useSelection();
   const { master } = useCardMaster();
@@ -109,6 +125,10 @@ export default function ImprovePage() {
       <SectionCard>
         <div className="text-sm font-semibold text-slate-900">🔴 Attack（攻めの止め手）</div>
         <div className="mt-2 text-sm text-slate-800">{offenseMessage}</div>
+        <div className="mt-3 space-y-2">
+          {topOffenseTrait ? <MiniBar label={`trait: ${prettyKey(topOffenseTrait.trait_key)}`} value={topOffenseTrait.stats.encounter_rate} tone="red" /> : null}
+          {topOffenseCard ? <MiniBar label={`card: ${master?.getName(topOffenseCard.card_id) ?? `#${topOffenseCard.card_id}`}`} value={topOffenseCard.stats.encounter_rate} tone="red" /> : null}
+        </div>
         <details className="mt-2 text-xs text-slate-600">
           <summary className="cursor-pointer">詳細を見る（補助情報）</summary>
           <div className="mt-2 space-y-1">
@@ -121,6 +141,9 @@ export default function ImprovePage() {
       <SectionCard>
         <div className="text-sm font-semibold text-slate-900">🔵 Defense（守りの崩れ筋）</div>
         <div className="mt-2 text-sm text-slate-800">{defenseMessage}</div>
+        <div className="mt-3 space-y-2">
+          {topDefenseCard ? <MiniBar label={`threat: ${master?.getName(topDefenseCard.card_id) ?? `#${topDefenseCard.card_id}`}`} value={topDefenseCard.stats.encounter_rate} tone="blue" /> : null}
+        </div>
         <details className="mt-2 text-xs text-slate-600">
           <summary className="cursor-pointer">詳細を見る（補助情報）</summary>
           <div className="mt-2 space-y-1">
@@ -132,6 +155,9 @@ export default function ImprovePage() {
       <SectionCard>
         <div className="text-sm font-semibold text-slate-900">🟢 Environment（環境との相性）</div>
         <div className="mt-2 text-sm text-slate-800">{envMessage}</div>
+        <div className="mt-3 space-y-2">
+          {topTrendTrait ? <MiniBar label={`trait: ${prettyKey(topTrendTrait.trait_key)} / 2枚以上率`} value={topTrendTrait.summary.rate_ge_2} tone="green" /> : null}
+        </div>
         <details className="mt-2 text-xs text-slate-600">
           <summary className="cursor-pointer">詳細を見る（補助情報）</summary>
           <div className="mt-2 space-y-1">

@@ -110,6 +110,18 @@ export default function HomePage() {
       return a.card_id - b.card_id;
     });
   }, [selectedDeckBase, data]);
+  const averageElixir = useMemo(() => {
+    // Average is based on non-support slots to align with in-battle playable deck cards.
+    const costs = mergedCards
+      .filter((c) => c.slot_kind !== "support")
+      .map((c) => master?.getElixirCost(c.card_id) ?? null)
+      .filter((c): c is number => c != null);
+
+    if (costs.length === 0) return null;
+    const avg = costs.reduce((sum, c) => sum + c, 0) / costs.length;
+    return Math.round(avg * 10) / 10;
+  }, [mergedCards, master]);
+
 
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
@@ -190,7 +202,10 @@ export default function HomePage() {
             </div>
 
             <div>
-              <div className="text-xs text-slate-500">Cards</div>
+              <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                <span>Cards</span>
+                <span>avg elixir {averageElixir ?? "-"}</span>
+              </div>
               <div className="mt-2 space-y-2">
                 {mergedCards.length === 0 ? (
                   <div className="text-sm text-slate-600">No cards in this summary.</div>
@@ -215,7 +230,7 @@ export default function HomePage() {
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
                             <div className="mt-0.5 text-xs text-slate-500">
-                              slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"}
+                              slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
                             </div>
                           </div>
                         </div>

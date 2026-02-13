@@ -10,12 +10,14 @@ type IconUrls = {
 type CardView = {
   id: number;
   name: string;
+  elixirCost?: number;
   iconUrlByKind: Partial<Record<SlotKind, string>>;
 };
 
 export type CardMaster = {
   getName(id: number): string | null;
   getIconUrl(id: number, kind: SlotKind): string | null;
+  getElixirCost(id: number): number | null;
 };
 
 function pickIcon(item: { iconUrls?: IconUrls }, kind: SlotKind): string | undefined {
@@ -33,6 +35,7 @@ function buildMaster(resp: RoyaleApiCardsResponse): CardMaster {
     map.set(it.id, {
       id: it.id,
       name: it.name,
+      elixirCost: it.elixirCost,
       iconUrlByKind: {
         normal: pickIcon(it, "normal"),
         evolution: pickIcon(it, "evolution"),
@@ -45,6 +48,7 @@ function buildMaster(resp: RoyaleApiCardsResponse): CardMaster {
     map.set(s.id, {
       id: s.id,
       name: s.name,
+      elixirCost: s.elixirCost,
       iconUrlByKind: { support: s.iconUrls?.medium },
     });
   }
@@ -55,6 +59,9 @@ function buildMaster(resp: RoyaleApiCardsResponse): CardMaster {
     },
     getIconUrl(id: number, kind: SlotKind) {
       return map.get(id)?.iconUrlByKind[kind] ?? null;
+    },
+    getElixirCost(id: number) {
+      return map.get(id)?.elixirCost ?? null;
     },
   };
 }
