@@ -40,11 +40,13 @@ export type RoyaleApiCardsResponse = {
   items: Array<{
     name: string;
     id: number;
+    elixirCost?: number;
     iconUrls?: { medium?: string; evolutionMedium?: string; heroMedium?: string };
   }>;
   supportItems: Array<{
     name: string;
     id: number;
+    elixirCost?: number;
     iconUrls?: { medium?: string };
   }>;
 };
