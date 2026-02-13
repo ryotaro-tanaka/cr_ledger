@@ -35,9 +35,7 @@ export default function HomePage() {
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<DeckSummaryResponse | null>(null);
 
-  const playerLabel = player
-    ? `${player.player_name} (${player.player_tag})`
-    : "(not selected)";
+  const playerLabel = player ? `${player.player_name} (${player.player_tag})` : "(not selected)";
 
   useEffect(() => {
     if (!deckKey) {
@@ -75,7 +73,6 @@ export default function HomePage() {
   const mergedCards = useMemo<MergedCard[]>(() => {
     const baseCards = selectedDeckBase?.cards ?? [];
     const summaryCards = data?.cards ?? [];
-
     const byKey = new Map<string, MergedCard>();
 
     for (const c of baseCards) {
@@ -138,29 +135,28 @@ export default function HomePage() {
     const buildingCount = classCount("building");
     const swarmLikeCount = traitCount("swarm");
 
-    // Based on docs/deck_type.md archetype definitions (Cycle/Bait/Beatdown/Control/Siege/Bridge Spam).
     const style =
       minimumElixirCycle != null && minimumElixirCycle <= 9
-        ? "Cycle寄り"
+        ? "Cycle"
         : minimumElixirCycle != null && minimumElixirCycle >= 13
-          ? "Beatdown寄り"
+          ? "Beatdown"
           : buildingCount >= 2
-            ? "Siege寄り"
+            ? "Siege"
             : winConCount >= 2 && buildingCount === 0
-              ? "Bridge Spam寄り"
+              ? "Bridge Spam"
               : swarmLikeCount >= 2
-                ? "Bait寄り"
-                : "Control寄り";
+                ? "Bait"
+                : "Control";
 
-    const speed = minimumElixirCycle == null ? "不明" : minimumElixirCycle <= 9 ? "高速" : minimumElixirCycle <= 12 ? "中速" : "低速";
-    const aoeRes = aoeCount >= 4 ? "高め" : aoeCount >= 2 ? "普通" : "低め";
-    const airRes = airCount >= 3 ? "高め" : airCount >= 1 ? "普通" : "低め";
+    const speed = minimumElixirCycle == null ? "Unknown" : minimumElixirCycle <= 9 ? "Fast" : minimumElixirCycle <= 12 ? "Mid" : "Slow";
+    const aoeRes = aoeCount >= 4 ? "High" : aoeCount >= 2 ? "Medium" : "Low";
+    const airRes = airCount >= 3 ? "High" : airCount >= 1 ? "Medium" : "Low";
 
     return [
-      `このデッキは ${style}`,
-      `AoE耐性は ${aoeRes}`,
-      `Air耐性は ${airRes}`,
-      `サイクル速度は ${speed}`,
+      `Deck style: ${style}`,
+      `AoE resistance: ${aoeRes}`,
+      `Air resistance: ${airRes}`,
+      `Cycle speed: ${speed}`,
     ];
   }, [data, minimumElixirCycle]);
 
@@ -180,11 +176,11 @@ export default function HomePage() {
     const aoe = countTrait("aoe");
     const winCon = countClass("win_condition");
 
-    if (air >= 3) xs.push("Airへの対応力が高い");
-    if (aoe >= 3) xs.push(`AoEを${aoe}枚持つ`);
-    if (winCon >= 2) xs.push(`Win Conditionが${winCon}枚`);
-    if (minimumElixirCycle != null && minimumElixirCycle <= 10) xs.push("回転が速く主導権を取りやすい");
-    if (xs.length < 3) xs.push("カード役割の重複が少なく安定しやすい");
+    if (air >= 3) xs.push("Strong against air cards");
+    if (aoe >= 3) xs.push(`Has ${aoe} AoE cards`);
+    if (winCon >= 2) xs.push(`Has ${winCon} win condition cards`);
+    if (minimumElixirCycle != null && minimumElixirCycle <= 10) xs.push("Fast card rotation");
+    if (xs.length < 3) xs.push("Stable role balance");
     return xs.slice(0, 3);
   }, [data, minimumElixirCycle]);
 
@@ -204,11 +200,11 @@ export default function HomePage() {
     const antiSwarm = countTrait("aoe") + countTrait("splash");
     const building = countClass("building");
 
-    if (stunResist === 0) xs.push("Immobilizeに弱い可能性がある");
-    if (antiSwarm <= 1) xs.push("Swarm対策が薄い");
-    if (building === 0) xs.push("受けの建物が少ない");
-    if (minimumElixirCycle != null && minimumElixirCycle >= 13) xs.push("重め構成で受け遅れリスクがある");
-    if (xs.length < 3) xs.push("同系統マッチで後手になりやすい");
+    if (stunResist === 0) xs.push("May be weak vs immobilize");
+    if (antiSwarm <= 1) xs.push("May be weak vs swarm");
+    if (building === 0) xs.push("No clear defensive building");
+    if (minimumElixirCycle != null && minimumElixirCycle >= 13) xs.push("Heavy cycle can cause slow defense");
+    if (xs.length < 3) xs.push("Can lose tempo in mirror matchups");
     return xs.slice(0, 3);
   }, [data, minimumElixirCycle]);
 
@@ -220,8 +216,7 @@ export default function HomePage() {
 
         {!player || !deckKey ? (
           <div className="mt-2 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm text-slate-700 shadow-sm">
-            Setup is required. Please select <span className="font-semibold">Player</span> and{" "}
-            <span className="font-semibold">Deck</span> in Settings.
+            Setup is required. Please select <span className="font-semibold">Player</span> and <span className="font-semibold">Deck</span> in Settings.
             <div className="mt-2">
               <button
                 onClick={() => nav("/settings")}
@@ -237,8 +232,8 @@ export default function HomePage() {
       {cardsError ? <ApiErrorPanel title="Cards error" detail={cardsError} /> : null}
 
       <SectionCard>
-        <div className="text-sm font-semibold text-slate-900">デッキの性格（5秒サマリー）</div>
-        <div className="mt-1 text-xs text-slate-500">改善前に、まずこのデッキの現在地を1画面で把握します。</div>
+        <div className="text-sm font-semibold text-slate-900">1) Deck profile</div>
+        <div className="mt-1 text-xs text-slate-500">Simple summary to understand this deck in a few seconds.</div>
 
         {err ? (
           <div className="mt-3">
@@ -257,7 +252,7 @@ export default function HomePage() {
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-700">強み（3つ）</div>
+              <div className="text-xs font-semibold text-slate-700">Strengths (top 3)</div>
               <ul className="mt-2 space-y-1 text-sm text-slate-800">
                 {strengths.map((s) => (
                   <li key={s}>✓ {s}</li>
@@ -266,126 +261,122 @@ export default function HomePage() {
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-700">弱み（3つ）</div>
+              <div className="text-xs font-semibold text-slate-700">Weaknesses (top 3)</div>
               <ul className="mt-2 space-y-1 text-sm text-slate-800">
                 {weaknesses.map((w) => (
                   <li key={w}>⚠ {w}</li>
                 ))}
               </ul>
             </div>
-
-            <div>
-              <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                <span>Cards</span>
-                <span>最小エリクサーサイクル {minimumElixirCycle ?? "-"}</span>
-              </div>
-              <div className="mt-2 space-y-2">
-                {mergedCards.length === 0 ? (
-                  <div className="text-sm text-slate-600">No cards in this summary.</div>
-                ) : (
-                  mergedCards.map((c) => {
-                    const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
-                    const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
-                    const isWinCondition = c.classes.some((cl) => cl.includes("win_condition"));
-
-                    return (
-                      <details
-                        key={`${c.card_id}:${c.slot_kind}`}
-                        className={`rounded-2xl border px-3 py-2.5 ${isWinCondition ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-white"}`}
-                      >
-                        <summary className="cursor-pointer list-none">
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 shrink-0">
-                              {icon ? (
-                                <img src={icon} alt="" className="h-full w-full object-contain" loading="lazy" />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
-                                {isWinCondition ? (
-                                  <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">WIN CON</span>
-                                ) : null}
-                              </div>
-                              <div className="mt-0.5 text-xs text-slate-500">
-                                slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
-                              </div>
-                            </div>
-                          </div>
-                        </summary>
-
-                        <div className="mt-2 grid gap-1 text-xs">
-                          <div>
-                            <span className="text-slate-500">traits:</span>{" "}
-                            <span className="text-slate-700">{c.card_traits.length ? c.card_traits.map(prettyKey).join(", ") : "-"}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">classes:</span>{" "}
-                            <span className="text-slate-700">{c.classes.length ? c.classes.map(prettyKey).join(", ") : "-"}</span>
-                          </div>
-                        </div>
-                      </details>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <details className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-600">この判定のルール</summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
-                <li>デッキタイプ判定は docs/deck_type.md の6分類（Cycle/Bait/Beatdown/Control/Siege/Bridge Spam）を基準にした近似ルール。</li>
-                <li>AoE耐性・Air耐性は trait/class 内の該当キーワードの合計枚数で判定。</li>
-                <li>サイクル速度は slot0-7 のカードから最小4枚の elixir 合計（最小エリクサーサイクル）で判定。</li>
-                <li>強み・弱みは上記指標の閾値判定で最大3件を表示。</li>
-              </ul>
-            </details>
-
-            <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-600">詳細（traits / classes）</summary>
-              <div className="mt-3 space-y-4">
-                <div>
-                  <div className="text-xs text-slate-500">Traits</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {data.deck_traits.length === 0 ? (
-                      <div className="text-sm text-slate-600">No traits.</div>
-                    ) : (
-                      data.deck_traits.map((t) => (
-                        <span
-                          key={t.trait_key}
-                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
-                        >
-                          {prettyKey(t.trait_key)} · {t.count}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-xs text-slate-500">Classes</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {data.deck_classes.length === 0 ? (
-                      <div className="text-sm text-slate-600">No classes.</div>
-                    ) : (
-                      data.deck_classes.map((c) => (
-                        <span
-                          key={c.class_key}
-                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
-                        >
-                          {prettyKey(c.class_key)} · {c.count}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </details>
           </div>
         ) : null}
       </SectionCard>
+
+      {!loading && !err && data ? (
+        <SectionCard>
+          <div className="text-sm font-semibold text-slate-900">2) Cards and deck data</div>
+          <div className="mt-1 text-xs text-slate-500">Cards are always visible. Click a card to see traits and classes.</div>
+
+          <div className="mt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
+            <span>Cards</span>
+            <span>Minimum elixir cycle {minimumElixirCycle ?? "-"}</span>
+          </div>
+
+          <div className="mt-2 space-y-2">
+            {mergedCards.length === 0 ? (
+              <div className="text-sm text-slate-600">No cards in this summary.</div>
+            ) : (
+              mergedCards.map((c) => {
+                const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+                const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+                const isWinCondition = c.classes.some((cl) => cl.includes("win_condition"));
+
+                return (
+                  <details
+                    key={`${c.card_id}:${c.slot_kind}`}
+                    className={`rounded-2xl border px-3 py-2.5 ${isWinCondition ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-white"}`}
+                  >
+                    <summary className="cursor-pointer list-none">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 shrink-0">
+                          {icon ? (
+                            <img src={icon} alt="" className="h-full w-full object-contain" loading="lazy" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
+                            {isWinCondition ? (
+                              <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">WIN CON</span>
+                            ) : null}
+                          </div>
+                          <div className="mt-0.5 text-xs text-slate-500">
+                            slot {c.slot ?? "?"} · {c.slot_kind} · {c.card_type ?? "-"} · elixir {master?.getElixirCost(c.card_id) ?? "-"}
+                          </div>
+                        </div>
+                      </div>
+                    </summary>
+
+                    <div className="mt-2 grid gap-1 text-xs">
+                      <div>
+                        <span className="text-slate-500">traits:</span>{" "}
+                        <span className="text-slate-700">{c.card_traits.length ? c.card_traits.map(prettyKey).join(", ") : "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">classes:</span>{" "}
+                        <span className="text-slate-700">{c.classes.length ? c.classes.map(prettyKey).join(", ") : "-"}</span>
+                      </div>
+                    </div>
+                  </details>
+                );
+              })
+            )}
+          </div>
+
+          <details className="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-600">Traits and classes summary</summary>
+            <div className="mt-3 space-y-4">
+              <div>
+                <div className="text-xs text-slate-500">Traits</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {data.deck_traits.length === 0 ? (
+                    <div className="text-sm text-slate-600">No traits.</div>
+                  ) : (
+                    data.deck_traits.map((t) => (
+                      <span
+                        key={t.trait_key}
+                        className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
+                      >
+                        {prettyKey(t.trait_key)} · {t.count}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-500">Classes</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {data.deck_classes.length === 0 ? (
+                    <div className="text-sm text-slate-600">No classes.</div>
+                  ) : (
+                    data.deck_classes.map((c) => (
+                      <span
+                        key={c.class_key}
+                        className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
+                      >
+                        {prettyKey(c.class_key)} · {c.count}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </details>
+        </SectionCard>
+      ) : null}
     </section>
   );
 }
