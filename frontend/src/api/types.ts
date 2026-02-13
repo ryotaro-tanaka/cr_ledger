@@ -3,9 +3,21 @@ export type SlotKind = "normal" | "evolution" | "hero" | "support";
 export type ApiBaseOk = { ok: true };
 
 export type PlayersResponse = ApiBaseOk & {
+  filter: { last: number };
   players: Array<{
     player_tag: string;
     player_name: string;
+    total_battles: number;
+    decks: Array<{
+      my_deck_key: string;
+      deck_name: string | null;
+      battles: number;
+      cards: Array<{
+        slot: number;
+        card_id: number;
+        slot_kind: SlotKind;
+      }>;
+    }>;
   }>;
 };
 

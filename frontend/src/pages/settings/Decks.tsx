@@ -1,27 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
-import { getMyDecks, updateDeckName } from "../../api/api";
-import type { MyDecksResponse, SlotKind } from "../../api/types";
+import { updateDeckName } from "../../api/api";
+import type { SlotKind } from "../../api/types";
 import { toErrorText } from "../../lib/errors";
 import { useSelection } from "../../lib/selection";
 import { useCardMaster } from "../../cards/useCardMaster";
 import SectionCard from "../../components/SectionCard";
 import DeckRow from "./decks/DeckRow";
-import { useDeckCardsCache } from "./decks/useDeckCardsCache";
+import { useCommonPlayers } from "../../lib/commonPlayers";
 
 export default function Decks() {
 	const { player, deckKey, setDeckKey } = useSelection();
 	const { master } = useCardMaster();
 
-	// decks
-	const [dLoading, setDLoading] = useState(false);
-	const [dData, setDData] = useState<MyDecksResponse | null>(null);
-	const [dErr, setDErr] = useState<string | null>(null);
+	const { data: playersData, loading: dLoading, error: dErr, reload: reloadPlayers } = useCommonPlayers();
 
-	// deck cards cache
-	const { deckCardsMap, deckCardsErrMap, reset: resetDeckCardsCache } = useDeckCardsCache(dData?.decks);
-
-	// rename UI state (keep these names)
 	const [editingKey, setEditingKey] = useState<string | null>(null);
 	const [draftName, setDraftName] = useState<string>("");
 	const [renameLoadingKey, setRenameLoadingKey] = useState<string | null>(null);
@@ -29,37 +22,18 @@ export default function Decks() {
 
 	const playerSelected = !!player;
 
-	const reloadDecks = async (playerTag: string) => {
-		setDLoading(true);
-		setDErr(null);
-		try {
-			const res = await getMyDecks(playerTag, 200);
-			setDData(res);
-			return res;
-		} catch (e) {
-			const msg = toErrorText(e);
-			setDErr(msg);
-			return null;
-		} finally {
-			setDLoading(false);
-		}
-	};
-
-	// load decks when player changes
 	useEffect(() => {
-		if (!player) {
-			setDData(null);
-			resetDeckCardsCache();
-			setEditingKey(null);
-			setDraftName("");
-			setRenameLoadingKey(null);
-			setRenameErrMap({});
-			return;
-		}
-
-		void reloadDecks(player.player_tag);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
+		setEditingKey(null);
+		setDraftName("");
+		setRenameLoadingKey(null);
+		setRenameErrMap({});
 	}, [player?.player_tag]);
+
+	const selectedPlayer = useMemo(
+		() => playersData?.players.find((p) => p.player_tag === player?.player_tag) ?? null,
+		[playersData, player?.player_tag]
+	);
+	const decks = selectedPlayer?.decks ?? [];
 
 	const beginInlineEditSelected = (selectedKey: string, currentName: string) => {
 		setRenameErrMap((prev) => {
@@ -102,7 +76,7 @@ export default function Decks() {
 
 			try {
 				await updateDeckName(selectedKey, next);
-				await reloadDecks(player.player_tag);
+				await reloadPlayers();
 				setEditingKey(null);
 				setDraftName("");
 			} catch (e) {
@@ -132,18 +106,14 @@ export default function Decks() {
 				</div>
 			) : null}
 
-			{!dLoading && playerSelected && dData && dData.decks.length === 0 ? (
+			{!dLoading && playerSelected && decks.length === 0 ? (
 				<div className="mt-3 text-sm text-slate-600">No decks found.</div>
 			) : null}
 
 			<div className="mt-3 space-y-2">
-				{dData?.decks.map((d) => {
+				{decks.map((d) => {
 					const currentName = d.deck_name ?? "(no name)";
-					const cards = deckCardsMap[d.my_deck_key];
-					const cardsErr = deckCardsErrMap[d.my_deck_key] ?? null;
-
 					const isSelected = deckKey === d.my_deck_key;
-					const showLoadingThumbs = playerSelected && !cards && !cardsErr;
 
 					return (
 						<DeckRow
@@ -152,9 +122,9 @@ export default function Decks() {
 							currentName={currentName}
 							battles={d.battles}
 							isSelected={isSelected}
-							cards={cards}
-							cardsErr={cardsErr}
-							showLoadingThumbs={showLoadingThumbs}
+							cards={d.cards}
+							cardsErr={null}
+							showLoadingThumbs={false}
 							onSelect={() => setDeckKey(d.my_deck_key)}
 							getIconUrl={getIconUrl}
 							editingKey={editingKey}

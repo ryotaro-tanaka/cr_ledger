@@ -1,13 +1,11 @@
 // src/pages/setting/Selected.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionCard from "../../components/SectionCard";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
 import { useSelection } from "../../lib/selection";
-import { getMyDecks } from "../../api/api";
-import type { MyDecksResponse } from "../../api/types";
-import { toErrorText } from "../../lib/errors";
 import { cx } from "../../lib/cx";
+import { useCommonPlayers } from "../../lib/commonPlayers";
 
 type HintTone = "muted" | "warn";
 
@@ -25,53 +23,19 @@ export default function Selected() {
 
 	const playerLabel = player ? `${player.player_name} (${player.player_tag})` : "(none)";
 
-	// Fetch decks to show selected deck *name* (instead of deckKey)
-	const [decksLoading, setDecksLoading] = useState(false);
-	const [decksErr, setDecksErr] = useState<string | null>(null);
-	const [decksData, setDecksData] = useState<MyDecksResponse | null>(null);
-
-	useEffect(() => {
-		if (!player) {
-			setDecksData(null);
-			setDecksErr(null);
-			setDecksLoading(false);
-			return;
-		}
-
-		let cancelled = false;
-
-		void (async () => {
-			setDecksLoading(true);
-			setDecksErr(null);
-
-			try {
-				const res = await getMyDecks(player.player_tag, 200);
-				if (cancelled) return;
-				setDecksData(res);
-			} catch (e) {
-				if (cancelled) return;
-				setDecksErr(toErrorText(e));
-			} finally {
-				if (!cancelled) setDecksLoading(false);
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [player?.player_tag]);
+	const { data: playersData, loading: decksLoading, error: decksErr } = useCommonPlayers();
 
 	const selectedDeckLabel = useMemo(() => {
 		if (!deckKey) return "(none)";
 
-		// try resolve name from fetched decks
-		const hit = decksData?.decks?.find((d) => d.my_deck_key === deckKey);
+		const selectedPlayer = playersData?.players.find((p) => p.player_tag === player?.player_tag);
+		const hit = selectedPlayer?.decks.find((d) => d.my_deck_key === deckKey);
 		if (hit?.deck_name) return hit.deck_name;
 
 		// fallback
 		if (decksLoading) return "Loading…";
 		return "(unknown deck)";
-	}, [deckKey, decksData, decksLoading]);
+	}, [deckKey, playersData, player?.player_tag, decksLoading]);
 
 	return (
 		<SectionCard>

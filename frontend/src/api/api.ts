@@ -79,8 +79,8 @@ async function request<T>(path: string, opts?: { method?: "GET" | "POST" | "PATC
 
 // -------------------- endpoints --------------------
 
-export function getPlayers(): Promise<PlayersResponse> {
-  return request<PlayersResponse>("/api/players");
+export function getPlayers(last = 200): Promise<PlayersResponse> {
+  return request<PlayersResponse>("/api/common/players", { params: { last } });
 }
 
 export function sync(playerTag: string): Promise<SyncResponse> {
@@ -112,7 +112,7 @@ export function getPriority(playerTag: string, myDeckKey: string, last: number):
 }
 
 export function getCards(opts?: { nocache?: boolean }): Promise<RoyaleApiCardsResponse> {
-  return request<RoyaleApiCardsResponse>("/api/cards", { params: { nocache: opts?.nocache ? 1 : undefined } });
+  return request<RoyaleApiCardsResponse>("/api/common/cards", { params: { nocache: opts?.nocache ? 1 : undefined } });
 }
 
 export function getMyDeckCards(myDeckKey: string): Promise<MyDeckCardsResponse> {
@@ -122,7 +122,7 @@ export function getMyDeckCards(myDeckKey: string): Promise<MyDeckCardsResponse> 
 }
 
 export function updateDeckName(myDeckKey: string, deckName: string): Promise<{ ok: true }> {
-  return request<{ ok: true }>("/api/my-decks/name", {
+  return request<{ ok: true }>("/api/common/my-decks/name", {
     method: "PATCH",
     body: { my_deck_key: myDeckKey, deck_name: deckName },
   });

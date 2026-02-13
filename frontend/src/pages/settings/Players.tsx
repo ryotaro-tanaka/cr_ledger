@@ -1,40 +1,12 @@
-import { useEffect, useState } from "react";
 import ApiErrorPanel from "../../components/ApiErrorPanel";
-import { getPlayers } from "../../api/api";
-import type { PlayersResponse } from "../../api/types";
-import { toErrorText } from "../../lib/errors";
 import { useSelection } from "../../lib/selection";
 import { cx } from "../../lib/cx";
 import SectionCard from "../../components/SectionCard";
+import { useCommonPlayers } from "../../lib/commonPlayers";
 
 export default function Players() {
   const { player, setPlayer, clearDeckKey } = useSelection();
-
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<PlayersResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await getPlayers();
-        if (!cancelled) setData(res);
-      } catch (e) {
-        if (!cancelled) return;
-        setError(toErrorText(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data, loading, error } = useCommonPlayers();
 
   return (
     <SectionCard>
@@ -66,6 +38,7 @@ export default function Players() {
           >
             <div className="text-sm font-semibold text-slate-900">{p.player_name}</div>
             <div className="mt-1 text-xs text-slate-500">{p.player_tag}</div>
+            <div className="mt-1 text-[11px] text-slate-500">battles: {p.total_battles}</div>
           </button>
         ))}
       </div>
