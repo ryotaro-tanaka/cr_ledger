@@ -2,7 +2,6 @@ import InstallGuide from "./settings/InstallGuide";
 import Selected from "./settings/Selected";
 import Players from "./settings/Players";
 import Decks from "./settings/Decks";
-import CardsRefresh from "./settings/CardsRefresh";
 
 function isStandalonePWA(): boolean {
   const mql = window.matchMedia?.("(display-mode: standalone)");
@@ -31,7 +30,6 @@ export default function SettingsPage() {
       <Selected />
       <Players />
       <Decks />
-      <CardsRefresh />
     </section>
   );
 }

@@ -1,12 +1,11 @@
 import type {
-  MyDecksResponse,
-  OpponentTrendResponse,
   PlayersResponse,
-  PriorityResponse,
   RoyaleApiCardsResponse,
   SyncResponse,
-  MatchupByCardResponse,
-  MyDeckCardsResponse,
+  DeckSummaryResponse,
+  DeckOffenseCountersResponse,
+  DeckDefenseThreatsResponse,
+  TrendTraitsResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -47,7 +46,14 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
   return u.toString();
 }
 
-async function request<T>(path: string, opts?: { method?: "GET" | "POST" | "PATCH"; params?: Record<string, any>; body?: any }): Promise<T> {
+async function request<T>(
+  path: string,
+  opts?: {
+    method?: "GET" | "POST" | "PATCH";
+    params?: Record<string, string | number | boolean | undefined>;
+    body?: unknown;
+  }
+): Promise<T> {
   requireEnv();
   const url = buildUrl(path, opts?.params);
 
@@ -79,51 +85,43 @@ async function request<T>(path: string, opts?: { method?: "GET" | "POST" | "PATC
 
 // -------------------- endpoints --------------------
 
-export function getPlayers(): Promise<PlayersResponse> {
-  return request<PlayersResponse>("/api/players");
+export function getPlayers(last = 200): Promise<PlayersResponse> {
+  return request<PlayersResponse>("/api/common/players", { params: { last } });
 }
 
 export function sync(playerTag: string): Promise<SyncResponse> {
-  return request<SyncResponse>("/api/sync", { method: "POST", params: { player_tag: playerTag } });
-}
-
-export function getMyDecks(playerTag: string, last: number): Promise<MyDecksResponse> {
-  return request<MyDecksResponse>("/api/stats/my-decks", { params: { player_tag: playerTag, last } });
-}
-
-export function getOpponentTrendLast(playerTag: string, last: number): Promise<OpponentTrendResponse> {
-  return request<OpponentTrendResponse>("/api/stats/opponent-trend", { params: { player_tag: playerTag, last } });
-}
-
-export function getOpponentTrendSince(playerTag: string, since: string): Promise<OpponentTrendResponse> {
-  return request<OpponentTrendResponse>("/api/stats/opponent-trend", { params: { player_tag: playerTag, since } });
-}
-
-export function getMatchupByCard(playerTag: string, myDeckKey: string, last: number): Promise<MatchupByCardResponse> {
-  return request<MatchupByCardResponse>("/api/stats/matchup-by-card", {
-    params: { player_tag: playerTag, my_deck_key: myDeckKey, last },
-  });
-}
-
-export function getPriority(playerTag: string, myDeckKey: string, last: number): Promise<PriorityResponse> {
-  return request<PriorityResponse>("/api/stats/priority", {
-    params: { player_tag: playerTag, my_deck_key: myDeckKey, last },
-  });
+  return request<SyncResponse>("/api/common/sync", { method: "POST", body: { player_tag: playerTag } });
 }
 
 export function getCards(opts?: { nocache?: boolean }): Promise<RoyaleApiCardsResponse> {
-  return request<RoyaleApiCardsResponse>("/api/cards", { params: { nocache: opts?.nocache ? 1 : undefined } });
-}
-
-export function getMyDeckCards(myDeckKey: string): Promise<MyDeckCardsResponse> {
-  return request<MyDeckCardsResponse>("/api/my-deck-cards", {
-    params: { my_deck_key: myDeckKey },
-  });
+  return request<RoyaleApiCardsResponse>("/api/common/cards", { params: { nocache: opts?.nocache ? 1 : undefined } });
 }
 
 export function updateDeckName(myDeckKey: string, deckName: string): Promise<{ ok: true }> {
-  return request<{ ok: true }>("/api/my-decks/name", {
+  return request<{ ok: true }>("/api/common/my-decks/name", {
     method: "PATCH",
     body: { my_deck_key: myDeckKey, deck_name: deckName },
+  });
+}
+
+export function getDeckSummary(myDeckKey: string): Promise<DeckSummaryResponse> {
+  return request<DeckSummaryResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/summary`);
+}
+
+export function getDeckOffenseCounters(myDeckKey: string, seasons = 2): Promise<DeckOffenseCountersResponse> {
+  return request<DeckOffenseCountersResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/offense/counters`, {
+    params: { seasons },
+  });
+}
+
+export function getDeckDefenseThreats(myDeckKey: string, seasons = 2): Promise<DeckDefenseThreatsResponse> {
+  return request<DeckDefenseThreatsResponse>(`/api/decks/${encodeURIComponent(myDeckKey)}/defense/threats`, {
+    params: { seasons },
+  });
+}
+
+export function getTrendTraits(playerTag: string, seasons = 2): Promise<TrendTraitsResponse> {
+  return request<TrendTraitsResponse>(`/api/trend/${encodeURIComponent(playerTag)}/traits`, {
+    params: { seasons },
   });
 }

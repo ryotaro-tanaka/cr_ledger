@@ -9,10 +9,8 @@ function cx(...xs: Array<string | false | undefined | null>) {
 
 export default function BottomNav() {
   const items: Item[] = [
-    { to: "/", label: "Home", icon: <span className="text-[18px] leading-none">🏠</span> },
-    { to: "/priority", label: "Priority", icon: <span className="text-[18px] leading-none">🎯</span> },
-    { to: "/matchup", label: "Matchup", icon: <span className="text-[18px] leading-none">⚔️</span> },
-    { to: "/trend", label: "Trend", icon: <span className="text-[18px] leading-none">📈</span> },
+    { to: "/", label: "Overview", icon: <span className="text-[18px] leading-none">🏠</span> },
+    { to: "/improve", label: "Improve", icon: <span className="text-[18px] leading-none">🛠</span> },
     { to: "/settings", label: "Settings", icon: <span className="text-[18px] leading-none">⚙️</span> },
   ];
 
@@ -24,7 +22,7 @@ export default function BottomNav() {
       {/* full width bar */}
       <div className="border-t border-slate-200 bg-white/90 backdrop-blur py-4">
         <div className="mx-auto max-w-md">
-          <div className="grid grid-cols-5">
+          <div className="grid grid-cols-3">
             {items.map((it) => (
               <NavLink
                 key={it.to}
