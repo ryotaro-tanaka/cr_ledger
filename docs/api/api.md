@@ -88,7 +88,32 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, filter, players }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "filter": { "last": 200 },
+  "players": [
+    {
+      "player_tag": "GYVCJJCR0",
+      "player_name": "tanakar",
+      "total_battles": 200,
+      "decks": [
+        {
+          "my_deck_key": "GYVCJJCR0::27000010:evolution|...|159000000:support",
+          "deck_name": "name",
+          "battles": 200,
+          "cards": [
+            { "slot": 0, "card_id": 27000010, "slot_kind": "evolution" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -122,9 +147,18 @@ Request:
   - `deck_name`: string（空文字でクリア）
 
 Responses:
-- 200: `{ ok, my_deck_key, deck_name }`
+- 200: 成功
 - 400: 入力不正
 - 404: デッキ未存在
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "my_deck_key": "GYVCJJCR0::26000010:normal|...|159000000:support",
+  "deck_name": "my ladder deck"
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -148,6 +182,29 @@ Request:
 Responses:
 - 200: 同期サマリと明細
 - 400: パラメータ不正
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "synced": {
+    "total_fetched": 40,
+    "upserted": 11,
+    "skipped": 3,
+    "skipped_non_target": 3,
+    "skipped_other": 0,
+    "stopped_early": 1
+  },
+  "results": [
+    { "status": "skipped", "reason": "non-target gameMode: DraftMode_Princess" },
+    {
+      "status": "upserted",
+      "battle_id": "VLLCRRLLV_QY8P9JJ_20260204T065501.000Z_pathOfLegend",
+      "my_deck_key": "VLLCRRLLV::26000000:..."
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -179,7 +236,35 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, source, items, supportItems }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "source": "proxy.royaleapi.dev",
+  "items": [
+    {
+      "name": "Knight",
+      "id": 26000000,
+      "maxLevel": 16,
+      "maxEvolutionLevel": 3,
+      "elixirCost": 3,
+      "iconUrls": { "medium": "https://api-assets.clashroyale.com/...png" },
+      "rarity": "common"
+    }
+  ],
+  "supportItems": [
+    {
+      "name": "Tower Princess",
+      "id": 159000000,
+      "maxLevel": 16,
+      "iconUrls": { "medium": "https://api-assets.clashroyale.com/cards/300/...png" },
+      "rarity": "common"
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -210,7 +295,24 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, filter, no_win_condition_points, total_points, cards }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "filter": { "last": 200 },
+  "no_win_condition_points": 0,
+  "total_points": 200,
+  "cards": [
+    {
+      "card_id": 26000000,
+      "slot_kind": "normal",
+      "fractional_points": 10.5
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -259,7 +361,26 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, filter, total_battles, traits }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "filter": { "seasons": 2 },
+  "total_battles": 100,
+  "traits": [
+    {
+      "trait_key": "is_aoe",
+      "distribution": [
+        { "count": 0, "battles": 8, "rate": 0.08 },
+        { "count": 1, "battles": 34, "rate": 0.34 }
+      ],
+      "summary": { "mean_count": 1.73, "rate_ge_2": 0.58 }
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -362,7 +483,30 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, deck_traits, deck_classes, cards }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "deck_traits": [
+    { "trait_key": "stun", "count": 1 },
+    { "trait_key": "is_aoe", "count": 1 }
+  ],
+  "deck_classes": [
+    { "class_key": "tank", "count": 1 }
+  ],
+  "cards": [
+    {
+      "card_id": 26000000,
+      "slot_kind": "evolution",
+      "card_type": "unit",
+      "card_traits": ["stun", "is_aoe"],
+      "classes": ["tank"]
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -396,7 +540,50 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, filter, summary, counters }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "filter": { "seasons": 2 },
+  "summary": {
+    "total_battles": 184,
+    "baseline_win_rate": 0.538,
+    "win_condition_cards": [
+      { "card_id": 26000000, "slot_kind": "normal" }
+    ]
+  },
+  "counters": {
+    "cards": [
+      {
+        "card_id": 28000011,
+        "slot_kind": "normal",
+        "stats": {
+          "battles_with_element": 62,
+          "encounter_rate": 0.337,
+          "win_rate_given": 0.403,
+          "delta_vs_baseline": -0.135,
+          "threat_score": 0.0455
+        }
+      }
+    ],
+    "traits": [
+      {
+        "trait_key": "stun",
+        "description": "Zap系カードの代表的効果。対象の行動を一瞬停止させる…",
+        "stats": {
+          "battles_with_element": 71,
+          "encounter_rate": 0.386,
+          "win_rate_given": 0.451,
+          "delta_vs_baseline": -0.087,
+          "threat_score": 0.0336
+        }
+      }
+    ]
+  }
+}
+```
 
 Response schema (200):
 - `ok`: boolean
@@ -439,7 +626,32 @@ Request:
 - JSON Body: なし
 
 Responses:
-- 200: `{ ok, filter, summary, threats }`
+- 200: 成功
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "filter": { "seasons": 2 },
+  "summary": {
+    "total_battles": 184,
+    "baseline_win_rate": 0.538
+  },
+  "threats": [
+    {
+      "card_id": 26000000,
+      "slot_kind": "normal",
+      "stats": {
+        "battles_with_element": 62,
+        "encounter_rate": 0.337,
+        "win_rate_given": 0.403,
+        "delta_vs_baseline": -0.135,
+        "threat_score": 0.0455
+      }
+    }
+  ]
+}
+```
 
 Response schema (200):
 - `ok`: boolean
