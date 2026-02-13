@@ -1,4 +1,20 @@
 import { clampInt, json } from "../http.js";
+import {
+  findAllCardTraitKvs,
+  findAllCardTraits,
+  findBattleOpponentCardsForDeck,
+  findCardClassesByCardIds,
+  findCardTraitKeysByCardIds,
+  findCardTraitsByCardIds,
+  findDeckBattleSummary,
+  findDeckCards,
+  findDeckCardsWithSlot,
+  findDeckWinConditionCards,
+  findDefenseThreats,
+  findOffenseCardCounters,
+  findRecentSeasonStartTimes,
+  findTraitDescriptions,
+} from "../db/decks.js";
 
 const TRAIT_FIELDS = [
   "is_air",
@@ -126,73 +142,26 @@ export async function handleDeckSummary(env, myDeckKeyRaw) {
     return json({ ok: false, error: "invalid my_deck_key" }, 400);
   }
 
-  const cardsResult = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      slot_kind
-    FROM my_deck_cards
-    WHERE my_deck_key = ?
-    ORDER BY slot ASC;
-    `
-  ).bind(myDeckKey).all();
-
-  const cards = cardsResult.results || [];
+  const cards = await findDeckCards(env, myDeckKey);
   if (cards.length === 0) {
     return json({ ok: true, deck_traits: [], deck_classes: [], cards: [] }, 200);
   }
 
   const cardIds = [...new Set(cards.map((card) => card.card_id))];
-  const placeholders = cardIds.map(() => "?").join(",");
+  const cardTraits = await findCardTraitsByCardIds(env, cardIds);
+  const traitKvs = await findCardTraitKeysByCardIds(env, cardIds);
+  const classes = await findCardClassesByCardIds(env, cardIds);
 
-  const cardTraitsResult = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      card_type,
-      is_air,
-      can_damage_air,
-      primary_target_buildings,
-      is_aoe,
-      is_swarm_like
-    FROM card_traits
-    WHERE card_id IN (${placeholders});
-    `
-  ).bind(...cardIds).all();
-
-  const traitKvResult = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      slot_kind,
-      trait_key
-    FROM card_trait_kv
-    WHERE card_id IN (${placeholders});
-    `
-  ).bind(...cardIds).all();
-
-  const classResult = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      class_key
-    FROM card_classes
-    WHERE card_id IN (${placeholders});
-    `
-  ).bind(...cardIds).all();
-
-  const cardTraitsById = new Map(
-    (cardTraitsResult.results || []).map((row) => [row.card_id, row])
-  );
+  const cardTraitsById = new Map(cardTraits.map((row) => [row.card_id, row]));
 
   const traitKvById = new Map();
-  for (const row of traitKvResult.results || []) {
+  for (const row of traitKvs) {
     if (!traitKvById.has(row.card_id)) traitKvById.set(row.card_id, []);
     traitKvById.get(row.card_id).push(row);
   }
 
   const classesById = new Map();
-  for (const row of classResult.results || []) {
+  for (const row of classes) {
     if (!classesById.has(row.card_id)) classesById.set(row.card_id, []);
     classesById.get(row.card_id).push(row.class_key);
   }
@@ -245,58 +214,29 @@ export async function handleDeckOffenseCounters(env, url, path) {
   const suffix = "/offense/counters";
 
   const raw = path.slice(prefix.length, path.length - suffix.length);
-  const decoded = decodeURIComponent(raw || "").trim();
+
+  let decoded;
+  try {
+    decoded = decodeURIComponent(raw || "").trim();
+  } catch {
+    return json({ ok: false, error: "invalid my_deck_key" }, 400);
+  }
+
   if (!decoded) return json({ ok: false, error: "my_deck_key required" }, 400);
 
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
 
-  const deckCardsRes = await env.DB.prepare(
-    `
-    SELECT
-      mdc.card_id,
-      mdc.slot_kind,
-      mdc.slot
-    FROM my_deck_cards mdc
-    WHERE mdc.my_deck_key = ?
-    ORDER BY mdc.slot ASC;
-    `
-  ).bind(decoded).all();
-
-  const deckCards = deckCardsRes.results || [];
+  const deckCards = await findDeckCardsWithSlot(env, decoded);
   if (deckCards.length === 0) {
     return json({ ok: false, error: "deck not found" }, 404);
   }
 
-  const winConditionCardsRes = await env.DB.prepare(
-    `
-    SELECT
-      mdc.card_id,
-      mdc.slot_kind,
-      mdc.slot
-    FROM my_deck_cards mdc
-    JOIN card_classes cc
-      ON cc.card_id = mdc.card_id
-      AND cc.class_key = 'win_condition'
-    WHERE mdc.my_deck_key = ?
-    ORDER BY mdc.slot ASC;
-    `
-  ).bind(decoded).all();
-
-  const winConditionCards = (winConditionCardsRes.results || []).map((row) => ({
+  const winConditionCards = (await findDeckWinConditionCards(env, decoded)).map((row) => ({
     card_id: row.card_id,
     slot_kind: row.slot_kind,
   }));
 
-  const seasonRows = await env.DB.prepare(
-    `
-    SELECT start_time
-    FROM seasons
-    ORDER BY start_time DESC
-    LIMIT ?;
-    `
-  ).bind(seasons).all();
-
-  const seasonStartTimes = (seasonRows.results || [])
+  const seasonStartTimes = (await findRecentSeasonStartTimes(env, seasons))
     .map((row) => row.start_time)
     .filter(Boolean)
     .sort();
@@ -318,20 +258,9 @@ export async function handleDeckOffenseCounters(env, url, path) {
     });
   }
 
-  const summaryRes = await env.DB.prepare(
-    `
-    SELECT
-      COUNT(*) AS total_battles,
-      AVG(CASE WHEN result = 'win' THEN 1.0 ELSE 0.0 END) AS baseline_win_rate
-    FROM battles
-    WHERE my_deck_key = ?
-      AND result IN ('win','loss')
-      AND (? IS NULL OR battle_time >= ?);
-    `
-  ).bind(decoded, since, since).all();
-
-  const totalBattles = Number(summaryRes.results?.[0]?.total_battles) || 0;
-  const baselineWinRate = Number(summaryRes.results?.[0]?.baseline_win_rate) || 0;
+  const summary = await findDeckBattleSummary(env, decoded, since);
+  const totalBattles = Number(summary?.total_battles) || 0;
+  const baselineWinRate = Number(summary?.baseline_win_rate) || 0;
 
   if (totalBattles === 0) {
     return json({
@@ -349,35 +278,7 @@ export async function handleDeckOffenseCounters(env, url, path) {
     });
   }
 
-  const cardCountersRes = await env.DB.prepare(
-    `
-    WITH target_battles AS (
-      SELECT battle_id, result
-      FROM battles
-      WHERE my_deck_key = ?
-        AND result IN ('win','loss')
-        AND (? IS NULL OR battle_time >= ?)
-    ),
-    card_per_battle AS (
-      SELECT
-        boc.card_id,
-        boc.slot_kind,
-        tb.battle_id,
-        tb.result
-      FROM target_battles tb
-      JOIN battle_opponent_cards boc ON boc.battle_id = tb.battle_id
-    )
-    SELECT
-      card_id,
-      slot_kind,
-      COUNT(*) AS battles_with_element,
-      SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS wins_with_element
-    FROM card_per_battle
-    GROUP BY card_id, slot_kind;
-    `
-  ).bind(decoded, since, since).all();
-
-  const cardCounters = (cardCountersRes.results || [])
+  const cardCounters = (await findOffenseCardCounters(env, decoded, since))
     .map((row) => ({
       card_id: row.card_id,
       slot_kind: row.slot_kind,
@@ -390,73 +291,25 @@ export async function handleDeckOffenseCounters(env, url, path) {
     }))
     .sort(sortCounterRows);
 
-  const battleCardRowsRes = await env.DB.prepare(
-    `
-    WITH target_battles AS (
-      SELECT battle_id, result
-      FROM battles
-      WHERE my_deck_key = ?
-        AND result IN ('win','loss')
-        AND (? IS NULL OR battle_time >= ?)
-    )
-    SELECT
-      tb.battle_id,
-      tb.result,
-      boc.card_id,
-      boc.slot_kind
-    FROM target_battles tb
-    JOIN battle_opponent_cards boc ON boc.battle_id = tb.battle_id
-    ORDER BY tb.battle_id ASC, boc.slot ASC;
-    `
-  ).bind(decoded, since, since).all();
+  const battleCardRows = await findBattleOpponentCardsForDeck(env, decoded, since);
+  const allCardTraits = await findAllCardTraits(env);
+  const allCardTraitKvs = await findAllCardTraitKvs(env);
+  const traitDescriptionsRows = await findTraitDescriptions(env);
 
-  const cardTraitsRes = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      is_air,
-      can_damage_air,
-      primary_target_buildings,
-      is_aoe,
-      is_swarm_like
-    FROM card_traits;
-    `
-  ).all();
-
-  const cardTraitKvsRes = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      slot_kind,
-      trait_key,
-      trait_value
-    FROM card_trait_kv;
-    `
-  ).all();
-
-  const traitDescriptionsRes = await env.DB.prepare(
-    `
-    SELECT
-      trait_key,
-      description
-    FROM trait_keys;
-    `
-  ).all();
-
-  const cardTraitsById = new Map((cardTraitsRes.results || []).map((row) => [row.card_id, row]));
+  const cardTraitsById = new Map(allCardTraits.map((row) => [row.card_id, row]));
 
   const cardTraitKvsById = new Map();
-  for (const row of cardTraitKvsRes.results || []) {
+  for (const row of allCardTraitKvs) {
     if (!cardTraitKvsById.has(row.card_id)) cardTraitKvsById.set(row.card_id, []);
     cardTraitKvsById.get(row.card_id).push(row);
   }
 
-  const traitDescriptions = new Map((traitDescriptionsRes.results || []).map((row) => [row.trait_key, row.description]));
+  const traitDescriptions = new Map(traitDescriptionsRows.map((row) => [row.trait_key, row.description]));
 
   const battleResultById = new Map();
   const traitsByBattle = new Map();
 
-  for (const row of battleCardRowsRes.results || []) {
+  for (const row of battleCardRows) {
     battleResultById.set(row.battle_id, row.result);
 
     if (!traitsByBattle.has(row.battle_id)) {
@@ -530,51 +383,20 @@ export async function handleDeckDefenseThreats(env, url, path) {
 
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
 
-  const deckCardsRes = await env.DB.prepare(
-    `
-    SELECT
-      card_id,
-      slot_kind
-    FROM my_deck_cards
-    WHERE my_deck_key = ?
-    ORDER BY slot ASC;
-    `
-  ).bind(decoded).all();
-
-  const deckCards = deckCardsRes.results || [];
+  const deckCards = await findDeckCards(env, decoded);
   if (deckCards.length === 0) {
     return json({ ok: false, error: "deck not found" }, 404);
   }
 
-  const seasonRows = await env.DB.prepare(
-    `
-    SELECT start_time
-    FROM seasons
-    ORDER BY start_time DESC
-    LIMIT ?;
-    `
-  ).bind(seasons).all();
-
-  const seasonStartTimes = (seasonRows.results || [])
+  const seasonStartTimes = (await findRecentSeasonStartTimes(env, seasons))
     .map((row) => row.start_time)
     .filter(Boolean)
     .sort();
   const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
 
-  const summaryRes = await env.DB.prepare(
-    `
-    SELECT
-      COUNT(*) AS total_battles,
-      AVG(CASE WHEN result = 'win' THEN 1.0 ELSE 0.0 END) AS baseline_win_rate
-    FROM battles
-    WHERE my_deck_key = ?
-      AND result IN ('win','loss')
-      AND (? IS NULL OR battle_time >= ?);
-    `
-  ).bind(decoded, since, since).all();
-
-  const totalBattles = Number(summaryRes.results?.[0]?.total_battles) || 0;
-  const baselineWinRate = Number(summaryRes.results?.[0]?.baseline_win_rate) || 0;
+  const summary = await findDeckBattleSummary(env, decoded, since);
+  const totalBattles = Number(summary?.total_battles) || 0;
+  const baselineWinRate = Number(summary?.baseline_win_rate) || 0;
 
   if (totalBattles === 0) {
     return json({
@@ -588,44 +410,7 @@ export async function handleDeckDefenseThreats(env, url, path) {
     });
   }
 
-  const threatsRes = await env.DB.prepare(
-    `
-    WITH target_battles AS (
-      SELECT battle_id, result
-      FROM battles
-      WHERE my_deck_key = ?
-        AND result IN ('win','loss')
-        AND (? IS NULL OR battle_time >= ?)
-    ),
-    opponent_win_condition_cards AS (
-      SELECT
-        tb.battle_id,
-        tb.result,
-        boc.card_id,
-        boc.slot_kind
-      FROM target_battles tb
-      JOIN battle_opponent_cards boc
-        ON boc.battle_id = tb.battle_id
-      JOIN card_classes cc
-        ON cc.card_id = boc.card_id
-        AND cc.class_key = 'win_condition'
-      GROUP BY
-        tb.battle_id,
-        tb.result,
-        boc.card_id,
-        boc.slot_kind
-    )
-    SELECT
-      card_id,
-      slot_kind,
-      COUNT(*) AS battles_with_element,
-      SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS wins_with_element
-    FROM opponent_win_condition_cards
-    GROUP BY card_id, slot_kind;
-    `
-  ).bind(decoded, since, since).all();
-
-  const threats = (threatsRes.results || [])
+  const threats = (await findDefenseThreats(env, decoded, since))
     .map((row) => ({
       card_id: row.card_id,
       slot_kind: row.slot_kind,
