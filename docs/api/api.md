@@ -29,7 +29,6 @@
 - `my_deck_key`: `{player_tag}::{card_id}:{slot_kind}|{card_id}:{slot_kind}|...`
   - 例: `GYVCJJCR0::26000010:normal|26000014:hero|26000058:evolution|...|159000000:support`
 - `slot_kind`: `normal | evolution | hero | support`
-- `last`: 直近バトル数。用途別デフォルト/上限あり（各API参照）。
 - `seasons`: 直近シーズン数。用途別デフォルト/上限あり（各API参照）。
 
 ## 共通レスポンス
@@ -75,7 +74,7 @@ Request:
 - Auth: Required
 - Path Params: なし
 - Query Params:
-  - `last` (optional, default 200, max 5000)
+  - `seasons` (optional, default 2, max 6)
 - JSON Body: なし
 
 Responses:
@@ -87,7 +86,7 @@ Response example (200):
 
 Response schema (200):
 - `ok`: boolean
-- `filter.last`: number
+- `filter.seasons`: number
 - `players[]`:
   - `player_tag`: string
   - `player_name`: string
@@ -267,7 +266,7 @@ Request:
 - Path Params:
   - `player_tag`: string
 - Query Params:
-  - `last`: number (optional, default 200, max 5000)
+  - `seasons`: number (optional, default 2, max 6)
 - JSON Body: なし
 
 Responses:
@@ -279,7 +278,7 @@ Response example (200):
 
 Response schema (200):
 - `ok`: boolean
-- `filter.last`: number
+- `filter.seasons`: number
 - `no_win_condition_points`: number
 - `total_points`: number
 - `cards[]`:

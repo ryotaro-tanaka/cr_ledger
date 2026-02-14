@@ -188,7 +188,7 @@ export default function ImprovePage() {
           getDeckDefenseThreats(deckKey, 2),
           getTrendTraits(player.player_tag, 2),
           getDeckSummary(deckKey),
-          getTrendWinConditions(player.player_tag, 200),
+          getTrendWinConditions(player.player_tag, 2),
         ]);
         if (cancelled) return;
         setOffense(off);

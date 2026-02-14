@@ -2,7 +2,8 @@ import { clampInt, json, readJson } from "../http.js";
 import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
 import { crCards } from "../cr_api.js";
-import { statsMyDecksLast } from "../db/analytics/legacy.js";
+import { statsMyDecksSeasons } from "../db/analytics/legacy.js";
+import { findRecentSeasonStartTimes } from "../db/decks.js";
 import {
   listPlayers,
   updateDeckName,
@@ -69,14 +70,20 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
 }
 
 export async function handleCommonPlayers(env, url) {
-  const last = clampInt(url.searchParams.get("last"), 1, 5000, 200);
+  const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
+  const seasonStartTimes = (await findRecentSeasonStartTimes(env, seasons))
+    .map((row) => row.start_time)
+    .filter(Boolean)
+    .sort();
+  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+
   const { players } = await listPlayers(env);
 
   const detailed = [];
 
   for (const player of players) {
     const playerTagDb = player.player_tag;
-    const stats = await statsMyDecksLast(env, playerTagDb, last);
+    const stats = await statsMyDecksSeasons(env, playerTagDb, since);
 
     const decks = [];
     for (const deck of stats.decks || []) {
@@ -97,7 +104,7 @@ export async function handleCommonPlayers(env, url) {
     });
   }
 
-  return json({ ok: true, filter: { last }, players: detailed });
+  return json({ ok: true, filter: { seasons }, players: detailed });
 }
 
 export async function handleCommonUpdateDeckName(req, env) {

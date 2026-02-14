@@ -86,8 +86,8 @@ async function request<T>(
 
 // -------------------- endpoints --------------------
 
-export function getPlayers(last = 200): Promise<PlayersResponse> {
-  return request<PlayersResponse>("/api/common/players", { params: { last } });
+export function getPlayers(seasons = 2): Promise<PlayersResponse> {
+  return request<PlayersResponse>("/api/common/players", { params: { seasons } });
 }
 
 export function sync(playerTag: string): Promise<SyncResponse> {
@@ -128,8 +128,8 @@ export function getTrendTraits(playerTag: string, seasons = 2): Promise<TrendTra
 }
 
 
-export function getTrendWinConditions(playerTag: string, last = 200): Promise<TrendWinConditionsResponse> {
+export function getTrendWinConditions(playerTag: string, seasons = 2): Promise<TrendWinConditionsResponse> {
   return request<TrendWinConditionsResponse>(`/api/trend/${encodeURIComponent(playerTag)}/win-conditions`, {
-    params: { last },
+    params: { seasons },
   });
 }

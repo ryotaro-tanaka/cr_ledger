@@ -8,7 +8,7 @@ Response example (200):
 ```json
 {
   "ok": true,
-  "filter": { "last": 200 },
+  "filter": { "seasons": 2 },
   "players": [
     {
       "player_tag": "GYVCJJCR0",
@@ -125,7 +125,7 @@ Response example (200):
 ```json
 {
   "ok": true,
-  "filter": { "last": 200 },
+  "filter": { "seasons": 2 },
   "no_win_condition_points": 0,
   "total_points": 200,
   "cards": [
