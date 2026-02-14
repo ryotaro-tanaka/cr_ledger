@@ -100,10 +100,16 @@ function CardThumbGrid({ cards, master }: { cards: CardThumb[]; master: ReturnTy
   return (
     <div className="mt-2 flex flex-wrap gap-2">
       {cards.map((c) => {
-        const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+        const icon =
+          master?.getIconUrl(c.card_id, c.slot_kind) ??
+          master?.getIconUrl(c.card_id, "normal") ??
+          master?.getIconUrl(c.card_id, "evolution") ??
+          master?.getIconUrl(c.card_id, "hero") ??
+          master?.getIconUrl(c.card_id, "support") ??
+          null;
         const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
         return (
-          <div key={`${c.card_id}:${c.slot_kind}`} className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-white" title={`${name} (${c.slot_kind})`}>
+          <div key={`${c.card_id}:${c.slot_kind}`} className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-white" title={`${name} (${c.slot_kind}) / ${c.card_id}`}>
             {icon ? <img src={icon} alt={name} className="h-full w-full object-contain" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>}
           </div>
         );
