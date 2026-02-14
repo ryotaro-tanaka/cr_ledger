@@ -105,7 +105,7 @@ function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResp
 }
 
 function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
-  if (!items.length) return <div className="text-xs text-slate-500">十分なデータがありません。</div>;
+  if (!items.length) return <div className="text-xs text-slate-500">Not enough data to show this yet.</div>;
   const maxEnv = Math.max(...items.map((i) => i.envAvgCount), 0.001);
   const maxMy = Math.max(...items.map((i) => i.myDeckCount), 0.001);
 
@@ -116,19 +116,19 @@ function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
           <div className="text-xs font-semibold text-slate-900">{i.label}</div>
           <div className="mt-1 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
             <div>
-              <div>環境平均 {i.envAvgCount.toFixed(2)}枚</div>
+              <div>Meta average {i.envAvgCount.toFixed(2)} cards</div>
               <div className="mt-1 h-1.5 rounded bg-slate-100">
                 <div className="h-full rounded bg-indigo-500" style={{ width: `${(i.envAvgCount / maxEnv) * 100}%` }} />
               </div>
             </div>
             <div>
-              <div>あなた {i.myDeckCount}枚</div>
+              <div>Your deck {i.myDeckCount} cards</div>
               <div className="mt-1 h-1.5 rounded bg-slate-100">
                 <div className="h-full rounded bg-emerald-500" style={{ width: `${(i.myDeckCount / Math.max(maxMy, 1)) * 100}%` }} />
               </div>
             </div>
           </div>
-          <div className="mt-1 text-[11px] text-slate-500">勝率差 {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
+          <div className="mt-1 text-[11px] text-slate-500">Win-rate delta {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
         </div>
       ))}
     </div>
@@ -140,7 +140,7 @@ function DefenseBars({
 }: {
   items: Array<{ key: string; label: string; expectedLoss: number; encounterRate: number; deltaVsBaseline: number }>;
 }) {
-  if (!items.length) return <div className="text-xs text-slate-500">十分なデータがありません。</div>;
+  if (!items.length) return <div className="text-xs text-slate-500">Not enough data to show this yet.</div>;
   const maxLoss = Math.max(...items.map((x) => x.expectedLoss), 0.001);
 
   return (
@@ -149,12 +149,12 @@ function DefenseBars({
         <div key={x.key}>
           <div className="flex items-center justify-between text-xs text-slate-700">
             <span>{x.label}</span>
-            <span>EL {x.expectedLoss.toFixed(1)} / 勝率差 {signedPct(x.deltaVsBaseline)}</span>
+            <span>EL {x.expectedLoss.toFixed(1)} / Win-rate delta {signedPct(x.deltaVsBaseline)}</span>
           </div>
           <div className="mt-1 h-2 rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-rose-500" style={{ width: `${(x.expectedLoss / maxLoss) * 100}%` }} />
           </div>
-          <div className="mt-1 text-[11px] text-slate-500">遭遇率 {pct(x.encounterRate)}</div>
+          <div className="mt-1 text-[11px] text-slate-500">Encounter {pct(x.encounterRate)}</div>
         </div>
       ))}
     </div>
@@ -317,10 +317,10 @@ export default function ImprovePage() {
     if ((attackLabel.includes("stun") || attackLabel.includes("immobilize")) && stunCount <= 1) {
       xs.push({
         id: "action-stun",
-        title: "行動キャンセル耐性を増やす構成を検討",
-        reason: `攻撃Issueが ${attackIssue?.label ?? "stun系"}（勝率差 ${signedPct(attackIssue?.deltaVsBaseline ?? 0)}）`,
-        currentState: `現状: stun/immobilize trait count = ${stunCount}`,
-        checks: ["次の5戦で攻め失敗の回数", "スタン系対面での勝率"],
+        title: "Add more anti-control tools",
+        reason: `Attack issue is ${attackIssue?.label ?? "stun type"} (win-rate delta ${signedPct(attackIssue?.deltaVsBaseline ?? 0)})`,
+        currentState: `Current state: stun/immobilize trait count = ${stunCount}`,
+        checks: ["count failed attacks", "win rate vs stun-style matchups"],
         priority: attackIssue?.expectedLoss ?? 0,
       });
     }
@@ -329,10 +329,10 @@ export default function ImprovePage() {
     if ((attackLabel.includes("swarm") || attackLabel.includes("bait")) && aoeCount <= 1) {
       xs.push({
         id: "action-aoe",
-        title: "範囲処理カテゴリを1枠厚くする構成を検討",
-        reason: `攻撃Issueが ${attackIssue?.label ?? "swarm/bait"} で阻害されている`,
-        currentState: `現状: AoE系 trait count = ${aoeCount}`,
-        checks: ["次の5戦で群れ処理の失敗回数", "呪文温存の成功率"],
+        title: "Add one stronger AoE option",
+        reason: `Attack issue is ${attackIssue?.label ?? "swarm/bait"}  as a blocker`,
+        currentState: `Current state: AoE-related trait count = ${aoeCount}`,
+        checks: ["count failed swarm clears", "spell hold success rate"],
         priority: (attackIssue?.expectedLoss ?? 0) * 0.95,
       });
     }
@@ -341,10 +341,10 @@ export default function ImprovePage() {
     if (defenseIssue && buildingCount === 0) {
       xs.push({
         id: "action-defense",
-        title: "受け専用枠（建物/高DPS）を1枠増やす構成を検討",
-        reason: `Defense Issueが ${defenseLabel}（勝率差 ${signedPct(defenseIssue.deltaVsBaseline)}）`,
-        currentState: `現状: 建物カード数 = ${buildingCount}`,
-        checks: ["次の5戦で${defenseLabel}対面の勝率", "受け札温存の成功率"],
+        title: "Add one dedicated defense slot (building/high DPS)",
+        reason: `Defense issue is ${defenseLabel} (win-rate delta ${signedPct(defenseIssue.deltaVsBaseline)})`,
+        currentState: `Current state: building card count = ${buildingCount}`,
+        checks: [`win rate vs ${defenseLabel}`, "defensive hold success rate"],
         priority: defenseIssue.expectedLoss,
       });
     }
@@ -352,10 +352,10 @@ export default function ImprovePage() {
     if (xs.length === 0) {
       xs.push({
         id: "action-fallback",
-        title: "上位Issueに対する受け失敗パターンを1つ固定して検証",
-        reason: "不足カテゴリが明確でないため、まず失敗パターンを固定して試す",
-        currentState: "現状: 直近5戦から攻め失敗2件/守り失敗2件を抽出",
-        checks: ["次の5戦で同失敗の再発率", "調整後の勝率差"],
+        title: "Pick one failure pattern from the top issue and test it",
+        reason: "No clear shortage category yet, so start from one fixed failure pattern.",
+        currentState: "Current state: Review last 5 matches: pick 2 attack failures and 2 defense failures",
+        checks: ["repeat rate of the same failure", "win-rate delta after changes"],
         priority: 0,
       });
     }
@@ -376,15 +376,15 @@ export default function ImprovePage() {
 
   const issueLine = priorityIssue
     ? priorityIssue.side === "attack"
-      ? `攻撃が「${priorityIssue.label}系」で止められやすい（勝率 ${signedPct(priorityIssue.deltaVsBaseline)}）`
-      : `守りが「${priorityIssue.label}」に崩れやすい（勝率 ${signedPct(priorityIssue.deltaVsBaseline)}）`
-    : "優先課題を決めるデータが不足しています";
+      ? `Your attack is often stopped by ${priorityIssue.label} (win-rate ${signedPct(priorityIssue.deltaVsBaseline)})`
+      : `Your defense often breaks against ${priorityIssue.label} (win-rate ${signedPct(priorityIssue.deltaVsBaseline)})`
+    : "Not enough data to decide a top priority";
 
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Improve</h1>
-        <div className="mt-1 text-xs text-slate-500">Issue / Why / Action の3段で、次の5戦で試す方針を決めます。</div>
+        <div className="mt-1 text-xs text-slate-500">Use Issue / Why / Action to decide one plan for your next 5 matches.</div>
       </div>
 
       {err ? <ApiErrorPanel detail={err} /> : null}
@@ -393,81 +393,81 @@ export default function ImprovePage() {
       {!loading && !err ? (
         <>
           <SectionCard>
-            <div className="text-sm font-semibold text-slate-900">Issue（今の最優先課題）</div>
+            <div className="text-sm font-semibold text-slate-900">Issue (Top priority now)</div>
             <div className="mt-2 text-sm font-semibold text-slate-900">{issueLine}</div>
-            <div className="mt-1 text-xs text-slate-600">Attack Issue: {attackIssue ? `${attackIssue.label} / EL ${attackIssue.expectedLoss.toFixed(1)}` : "データ不足"}</div>
-            <div className="mt-1 text-xs text-slate-600">Defense Issue: {defenseIssue ? `${defenseIssue.label} / EL ${defenseIssue.expectedLoss.toFixed(1)}` : "データ不足"}</div>
+            <div className="mt-1 text-xs text-slate-600">Attack Issue: {attackIssue ? `${attackIssue.label} / EL ${attackIssue.expectedLoss.toFixed(1)}` : "Not enough data"}</div>
+            <div className="mt-1 text-xs text-slate-600">Defense Issue: {defenseIssue ? `${defenseIssue.label} / EL ${defenseIssue.expectedLoss.toFixed(1)}` : "Not enough data"}</div>
             <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              結論: 今は {priorityIssue?.side === "defense" ? "Defense" : "Attack"} を先に直す
-              {priorityIssue ? `（遭遇率 ${pct(priorityIssue.encounterRate)} / battles ${priorityIssue.battles}）` : ""}
+              Decision: Prioritize {priorityIssue?.side === "defense" ? "Defense" : "Attack"} first
+              {priorityIssue ? ` (encounter ${pct(priorityIssue.encounterRate)} / battles ${priorityIssue.battles})` : ""}
             </div>
             {priorityIssue?.exampleCards.length ? (
-              <div className="mt-2 text-xs text-slate-600">具体カード例: {priorityIssue.exampleCards.join(" / ")}</div>
+              <div className="mt-2 text-xs text-slate-600">Example cards: {priorityIssue.exampleCards.join(" / ")}</div>
             ) : null}
           </SectionCard>
 
           <SectionCard>
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-900">Why（根拠）</div>
+              <div className="text-sm font-semibold text-slate-900">Why (Evidence)</div>
               <div className="flex gap-1 rounded-xl bg-slate-100 p-1 text-xs">
                 <button
                   onClick={() => setWhyTab("attack")}
                   className={`rounded-lg px-2 py-1 ${whyTab === "attack" ? "bg-white text-slate-900" : "text-slate-600"}`}
                 >
-                  環境平均 vs 自分（攻め）
+                  Meta vs your deck (attack)
                 </button>
                 <button
                   onClick={() => setWhyTab("defense")}
                   className={`rounded-lg px-2 py-1 ${whyTab === "defense" ? "bg-white text-slate-900" : "text-slate-600"}`}
                 >
-                  守り脅威（cards）
+                  Defense threats (cards)
                 </button>
               </div>
             </div>
 
             {whyTab === "attack" ? (
               <>
-                <div className="mt-2 text-xs text-slate-600">上位traitsの「環境平均枚数」と「あなたの枚数」を比較（EL/勝率差付き）</div>
+                <div className="mt-2 text-xs text-slate-600">Compare top traits by meta average card count and your deck count (with expected loss and win-rate delta).</div>
                 <OffenseCompareBars items={offenseCompare} />
               </>
             ) : (
               <>
-                <div className="mt-2 text-xs text-slate-600">Top threatsを expected loss 主軸で表示（勝率差・遭遇率付き）</div>
+                <div className="mt-2 text-xs text-slate-600">Top threats ranked by expected loss, with win-rate delta and encounter rate.</div>
                 <DefenseBars items={defenseBars} />
               </>
             )}
 
             {trendTopWinCons.length ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                環境の勝ち筋 Top3: {trendTopWinCons.map((x) => `${x.name} ${pct(x.rate)}`).join(" / ")}
+                Meta win conditions Top 3: {trendTopWinCons.map((x) => `${x.name} ${pct(x.rate)}`).join(" / ")}
               </div>
             ) : null}
           </SectionCard>
 
           <SectionCard>
-            <div className="text-sm font-semibold text-slate-900">Action（試す方針）</div>
+            <div className="text-sm font-semibold text-slate-900">Action (Plans to test)</div>
             {selectedAction ? (
               <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                固定メモ: {selectedAction.title}
+                Pinned note: {selectedAction.title}
               </div>
             ) : null}
             <div className="mt-3 space-y-3">
               {actions.map((a) => (
                 <div key={a.id} className="rounded-2xl border border-slate-200 bg-white p-3">
                   <div className="text-sm font-semibold text-slate-900">{a.title}</div>
-                  <div className="mt-1 text-xs text-slate-600">なぜ今か: {a.reason}</div>
+                  <div className="mt-1 text-xs text-slate-600">Why now: {a.reason}</div>
                   <div className="mt-1 text-xs text-slate-500">{a.currentState}</div>
-                  <div className="mt-1 text-[11px] text-slate-500">次の5戦で検証: {a.checks.join(" / ")}</div>
+                  <div className="mt-1 text-[11px] text-slate-500">Validate in the next 5 matches: {a.checks.join(" / ")}</div>
                   <button
                     onClick={() => setSelectedActionId(a.id)}
                     className={`mt-2 rounded-xl px-3 py-1.5 text-xs font-medium ${selectedActionId === a.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
                   >
-                    この方針で検討
+                    Use this plan
                   </button>
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-[11px] text-slate-500">※ 統計的関連に基づく提案であり、因果は断定しません。</div>
+            <div className="mt-2 text-[11px] text-slate-500">Suggestions are based on statistical correlation, not guaranteed causation.</div>
           </SectionCard>
         </>
       ) : null}
