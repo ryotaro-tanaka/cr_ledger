@@ -54,9 +54,28 @@ describe('Common handlers', () => {
     await expect(res.json()).resolves.toEqual({
       ok: true,
       traits: [
-        { trait_key: 'is_air', card_ids: [10001] },
-        { trait_key: 'is_aoe', card_ids: [10000] },
-        { trait_key: 'stun', card_ids: [10000] },
+        {
+          trait_key: 'is_air',
+          cards: [
+            { card_id: 10001, slot_kind: 'normal' },
+            { card_id: 10001, slot_kind: 'evolution' },
+            { card_id: 10001, slot_kind: 'hero' },
+            { card_id: 10001, slot_kind: 'support' },
+          ],
+        },
+        {
+          trait_key: 'is_aoe',
+          cards: [{ card_id: 10000, slot_kind: 'evolution' }],
+        },
+        {
+          trait_key: 'stun',
+          cards: [
+            { card_id: 10000, slot_kind: 'normal' },
+            { card_id: 10000, slot_kind: 'evolution' },
+            { card_id: 10000, slot_kind: 'hero' },
+            { card_id: 10000, slot_kind: 'support' },
+          ],
+        },
       ],
     });
   });

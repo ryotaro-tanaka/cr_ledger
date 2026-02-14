@@ -1,5 +1,6 @@
 import { clampInt, json } from "../http.js";
 import { normalizeTagForDb } from "../domain.js";
+import { findSeasonLowerBound } from "../db/decks.js";
 
 const BASE_TRAIT_KEYS = [
   "is_air",
@@ -68,20 +69,7 @@ export async function handleTrendTraits(env, url, path) {
   const playerTagDb = parsePlayerTagFromTrendPath(path, "/traits");
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
 
-  const seasonRows = await env.DB.prepare(
-    `
-    SELECT start_time
-    FROM seasons
-    ORDER BY start_time DESC
-    LIMIT ?;
-    `
-  ).bind(seasons).all();
-
-  const seasonStartTimes = (seasonRows.results || [])
-    .map((row) => row.start_time)
-    .filter(Boolean)
-    .sort();
-  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+  const since = await findSeasonLowerBound(env, seasons);
 
   const totalRow = await env.DB.prepare(
     `
@@ -251,16 +239,17 @@ export async function handleTrendTraits(env, url, path) {
 
 export async function handleTrendWinConditions(env, url, path) {
   const playerTagDb = parsePlayerTagFromTrendPath(path, "/win-conditions");
-  const last = clampInt(url.searchParams.get("last"), 1, 5000, 200);
+  const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
+  const since = await findSeasonLowerBound(env, seasons);
 
   const totals = await env.DB.prepare(
     `
     WITH recent AS (
       SELECT battle_id
       FROM battles
-      WHERE player_tag = ? AND result IN ('win','loss')
-      ORDER BY battle_time DESC
-      LIMIT ?
+      WHERE player_tag = ?
+        AND result IN ('win','loss')
+        AND (? IS NULL OR battle_time >= ?)
     ),
     battle_counts AS (
       SELECT
@@ -284,7 +273,7 @@ export async function handleTrendWinConditions(env, url, path) {
       (SELECT no_win_condition_points FROM no_win) AS no_win_condition_points;
     `
   )
-    .bind(playerTagDb, last)
+    .bind(playerTagDb, since, since)
     .all();
 
   const totalRow = totals.results?.[0] || {};
@@ -294,7 +283,7 @@ export async function handleTrendWinConditions(env, url, path) {
   if (totalPoints === 0) {
     return json({
       ok: true,
-      filter: { last },
+      filter: { seasons },
       no_win_condition_points: 0,
       total_points: 0,
       cards: [],
@@ -306,9 +295,9 @@ export async function handleTrendWinConditions(env, url, path) {
     WITH recent AS (
       SELECT battle_id
       FROM battles
-      WHERE player_tag = ? AND result IN ('win','loss')
-      ORDER BY battle_time DESC
-      LIMIT ?
+      WHERE player_tag = ?
+        AND result IN ('win','loss')
+        AND (? IS NULL OR battle_time >= ?)
     ),
     win_cards AS (
       SELECT
@@ -338,12 +327,12 @@ export async function handleTrendWinConditions(env, url, path) {
     ORDER BY fractional_points DESC;
     `
   )
-    .bind(playerTagDb, last)
+    .bind(playerTagDb, since, since)
     .all();
 
   return json({
     ok: true,
-    filter: { last },
+    filter: { seasons },
     no_win_condition_points: noWinConditionPoints,
     total_points: totalPoints,
     cards: cardsResult.results || [],

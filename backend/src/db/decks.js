@@ -277,3 +277,20 @@ export async function findDefenseThreats(env, myDeckKey, since) {
 
   return toResults(r);
 }
+
+
+export async function findSeasonLowerBound(env, seasons) {
+  const r = await env.DB.prepare(
+    `
+    SELECT MIN(start_time) AS start_time
+    FROM (
+      SELECT start_time
+      FROM seasons
+      ORDER BY start_time DESC
+      LIMIT ?
+    ) AS recent_seasons;
+    `
+  ).bind(seasons).all();
+
+  return r.results?.[0]?.start_time ?? null;
+}

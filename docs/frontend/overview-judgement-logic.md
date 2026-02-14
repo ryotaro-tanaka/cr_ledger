@@ -32,25 +32,43 @@
 - 表示名: `最小エリクサーサイクル`。
 - 値が不足する場合（4枚未満）は `-`。
 
-## デッキタイプ判定（近似ルール）
+## デッキタイプ判定（スコア方式）
 
-`docs/deck_type.md` を踏まえ、UI向けの近似として下記優先順で判定:
+`docs/deck_type.md` を踏まえ、固定の優先順ではなく各タイプに点数を付けて判定:
 
-1. `minimumElixirCycle <= 9` -> `Cycle寄り`
-2. `minimumElixirCycle >= 13` -> `Beatdown寄り`
-3. `building` class が 2枚以上 -> `Siege寄り`
-4. `win_condition` class が 2枚以上 かつ `building` 0枚 -> `Bridge Spam寄り`
-5. `swarm` 系 trait が 2枚以上 -> `Bait寄り`
-6. それ以外 -> `Control寄り`
+- Cycle
+  - 平均エリクサーが **3未満** を強く加点
+  - 最小エリクサーサイクルが速い場合に補助加点
+  - WIN条件のエリクサーが軽い場合に加点
+- Bait
+  - `swarm` 系 trait を主軸に加点
+  - `deploy_anywhere` / `outrange_tower` / `spawns_units` を補助加点
+- Beatdown
+  - 平均エリクサーが重い場合に加点
+  - WIN条件のエリクサーが **5以上** なら強く加点
+- Siege
+  - 建物WIN条件と `outrange_tower` trait を強く加点
+- Bridge Spam
+  - `card_type=building` が無い場合に加点
+  - `is_air` / `can_damage_air` / `anti_air` が少ない場合に加点
+- Control
+  - 上記に強く寄らない場合の受け反撃型として中庸指標で加点
+
+補足:
+- top1 と top2 の差が小さい場合やトップスコアが低い場合は `Mixed` 表示。
+- UI にはタイプ判定のスコア要約（0.00-1.00）を表示。
 
 ## 耐性・速度・強み弱み
 
-- AoE耐性: `aoe` 系 trait 数で 高め/普通/低め
-- Air耐性: `anti_air` class + `air` trait 数で 高め/普通/低め
+- Air耐性: `can_damage_air` trait 数をベースに判定し、`anti_air` class がある場合は少し加点
+- Swarm耐性: `aoe` trait 数で 高め/普通/低め
+- Giant耐性: `card_type=building` の枚数をベースに、`inferno` trait と `anti_tank` class で加点
+- Building耐性: `deploy_anywhere` と `outrange_tower` trait で加点し、`primary_target_buildings` が2つ以上ならさらに加点
 - サイクル速度:
   - `minimumElixirCycle <= 9` -> 高速
   - `<= 12` -> 中速
   - それ以上 -> 低速
+- タイプ別ガイド: 判定結果（またはMixed上位2候補）に応じて、基本戦術・注意点・戦術ポイントを簡潔に表示
 - 強み/弱み:
   - trait/class/cycle の閾値判定で候補文を作成し、最大3件を表示
 

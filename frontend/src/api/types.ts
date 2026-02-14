@@ -3,7 +3,7 @@ export type SlotKind = "normal" | "evolution" | "hero" | "support";
 export type ApiBaseOk = { ok: true };
 
 export type PlayersResponse = ApiBaseOk & {
-  filter: { last: number };
+  filter: { seasons: number };
   players: Array<{
     player_tag: string;
     player_name: string;
@@ -121,12 +121,23 @@ export type TrendTraitsResponse = ApiBaseOk & {
 };
 
 export type TrendWinConditionsResponse = ApiBaseOk & {
-  filter: { last: number };
+  filter: { seasons: number };
   no_win_condition_points: number;
   total_points: number;
   cards: Array<{
     card_id: number;
     slot_kind: SlotKind;
     fractional_points: number;
+  }>;
+};
+
+
+export type CommonTraitsResponse = ApiBaseOk & {
+  traits: Array<{
+    trait_key: string;
+    cards: Array<{
+      card_id: number;
+      slot_kind: SlotKind;
+    }>;
   }>;
 };

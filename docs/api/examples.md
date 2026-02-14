@@ -8,7 +8,7 @@ Response example (200):
 ```json
 {
   "ok": true,
-  "filter": { "last": 200 },
+  "filter": { "seasons": 2 },
   "players": [
     {
       "player_tag": "GYVCJJCR0",
@@ -114,7 +114,14 @@ Response example (200):
 {
   "ok": true,
   "traits": [
-    { "trait_key": "stun", "card_ids": [10000, 1000001, 122201] }
+    {
+      "trait_key": "stun",
+      "cards": [
+        { "card_id": 10000, "slot_kind": "normal" },
+        { "card_id": 1000001, "slot_kind": "evolution" },
+        { "card_id": 122201, "slot_kind": "hero" }
+      ]
+    }
   ]
 }
 ```
@@ -125,7 +132,7 @@ Response example (200):
 ```json
 {
   "ok": true,
-  "filter": { "last": 200 },
+  "filter": { "seasons": 2 },
   "no_win_condition_points": 0,
   "total_points": 200,
   "cards": [

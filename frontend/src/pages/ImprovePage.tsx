@@ -3,6 +3,7 @@ import SectionCard from "../components/SectionCard";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import { useSelection } from "../lib/selection";
 import { useCardMaster } from "../cards/useCardMaster";
+import { useCommonPlayers } from "../lib/commonPlayers";
 import { toErrorText } from "../lib/errors";
 import {
   getDeckDefenseThreats,
@@ -10,6 +11,7 @@ import {
   getDeckSummary,
   getTrendTraits,
   getTrendWinConditions,
+  getCommonTraits,
 } from "../api/api";
 import type {
   DeckDefenseThreatsResponse,
@@ -17,10 +19,21 @@ import type {
   DeckSummaryResponse,
   TrendTraitsResponse,
   TrendWinConditionsResponse,
+  CommonTraitsResponse,
 } from "../api/types";
 
 type WhyTab = "attack" | "defense";
 type IssueSide = "attack" | "defense";
+
+type CardThumb = {
+  card_id: number;
+  slot_kind: "normal" | "evolution" | "hero" | "support";
+};
+
+function normalizeSlotKind(v: unknown): CardThumb["slot_kind"] {
+  if (v === "normal" || v === "evolution" || v === "hero" || v === "support") return v;
+  return "normal";
+}
 
 type Issue = {
   side: IssueSide;
@@ -29,7 +42,7 @@ type Issue = {
   deltaVsBaseline: number;
   battles: number;
   expectedLoss: number;
-  exampleCards: string[];
+  exampleCards: CardThumb[];
 };
 
 type ActionPlan = {
@@ -48,6 +61,7 @@ type OffenseBarItem = {
   myDeckCount: number;
   expectedLoss: number;
   deltaVsBaseline: number;
+  traitCards: CardThumb[];
 };
 
 const ISSUE_FILTER = {
@@ -80,7 +94,7 @@ function traitCount(summary: DeckSummaryResponse | null, keyIncludes: string): n
   return summary.deck_traits.filter((t) => t.trait_key.includes(keyIncludes)).reduce((sum, t) => sum + t.count, 0);
 }
 
-function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): string[] {
+function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): CardThumb[] {
   if (!offense) return [];
 
   const key = traitKey.toLowerCase();
@@ -99,12 +113,30 @@ function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResp
     })
     .sort((a, b) => b.stats.encounter_rate - a.stats.encounter_rate)
     .slice(0, 2)
-    .map((c) => master?.getName(c.card_id) ?? `#${c.card_id}`);
+    .map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
 
   return matched;
 }
 
-function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
+function CardThumbGrid({ cards, master }: { cards: CardThumb[]; master: ReturnType<typeof useCardMaster>["master"] }) {
+  if (!cards.length) return <div className="text-xs text-slate-500">No cards.</div>;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {cards.map((c) => {
+        const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+        const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+        return (
+          <div key={`${c.card_id}:${c.slot_kind}`} className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-white" title={`${name} (${c.slot_kind})`}>
+            {icon ? <img src={icon} alt={name} className="h-full w-full object-contain" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OffenseCompareBars({ items, master }: { items: OffenseBarItem[]; master: ReturnType<typeof useCardMaster>["master"] }) {
   if (!items.length) return <div className="text-xs text-slate-500">Not enough data to show this yet.</div>;
   const maxEnv = Math.max(...items.map((i) => i.envAvgCount), 0.001);
   const maxMy = Math.max(...items.map((i) => i.myDeckCount), 0.001);
@@ -129,6 +161,10 @@ function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
             </div>
           </div>
           <div className="mt-1 text-[11px] text-slate-500">Win-rate delta {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
+          <details className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <summary className="cursor-pointer text-[11px] font-semibold text-slate-600">Trait cards</summary>
+            <CardThumbGrid cards={i.traitCards} master={master} />
+          </details>
         </div>
       ))}
     </div>
@@ -164,6 +200,7 @@ function DefenseBars({
 export default function ImprovePage() {
   const { player, deckKey } = useSelection();
   const { master } = useCardMaster();
+  const { data: playersData } = useCommonPlayers();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [offense, setOffense] = useState<DeckOffenseCountersResponse | null>(null);
@@ -171,6 +208,7 @@ export default function ImprovePage() {
   const [trend, setTrend] = useState<TrendTraitsResponse | null>(null);
   const [summary, setSummary] = useState<DeckSummaryResponse | null>(null);
   const [winConTrend, setWinConTrend] = useState<TrendWinConditionsResponse | null>(null);
+  const [commonTraits, setCommonTraits] = useState<CommonTraitsResponse | null>(null);
   const [whyTab, setWhyTab] = useState<WhyTab>("attack");
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
 
@@ -183,12 +221,13 @@ export default function ImprovePage() {
       setErr(null);
       setSelectedActionId(null);
       try {
-        const [off, def, tr, sum, wc] = await Promise.all([
+        const [off, def, tr, sum, wc, ct] = await Promise.all([
           getDeckOffenseCounters(deckKey, 2),
           getDeckDefenseThreats(deckKey, 2),
           getTrendTraits(player.player_tag, 2),
           getDeckSummary(deckKey),
-          getTrendWinConditions(player.player_tag, 200),
+          getTrendWinConditions(player.player_tag, 2),
+          getCommonTraits(),
         ]);
         if (cancelled) return;
         setOffense(off);
@@ -196,6 +235,7 @@ export default function ImprovePage() {
         setTrend(tr);
         setSummary(sum);
         setWinConTrend(wc);
+        setCommonTraits(ct);
       } catch (e) {
         if (!cancelled) setErr(toErrorText(e));
       } finally {
@@ -207,6 +247,22 @@ export default function ImprovePage() {
       cancelled = true;
     };
   }, [player, deckKey]);
+
+  const traitCardMap = useMemo(() => {
+    if (!commonTraits) return new Map<string, CardThumb[]>();
+    const byTrait = new Map<string, CardThumb[]>();
+    const traits = Array.isArray(commonTraits.traits) ? commonTraits.traits : [];
+    for (const row of traits) {
+      const cards = Array.isArray(row.cards) ? row.cards : [];
+      const normalized = cards
+        .map((c) => ({ card_id: Number(c?.card_id), slot_kind: normalizeSlotKind(c?.slot_kind) }))
+        .filter((c) => Number.isFinite(c.card_id))
+        .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
+
+      byTrait.set(row.trait_key, normalized);
+    }
+    return byTrait;
+  }, [commonTraits]);
 
   const attackIssue = useMemo<Issue | null>(() => {
     if (!offense || !trend) return null;
@@ -236,9 +292,9 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: cardExamplesForTrait(hit.trait.trait_key, offense, master),
+      exampleCards: traitCardMap.get(hit.trait.trait_key) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
     };
-  }, [offense, trend, master]);
+  }, [offense, trend, master, traitCardMap]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
@@ -262,7 +318,7 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.threat.stats.delta_vs_baseline,
       battles: hit.threat.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: [master?.getName(hit.threat.card_id) ?? `#${hit.threat.card_id}`],
+      exampleCards: [{ card_id: hit.threat.card_id, slot_kind: hit.threat.slot_kind }],
     };
   }, [defense, master]);
 
@@ -285,12 +341,13 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
+          traitCards: traitCardMap.get(t.trait_key) ?? [],
         };
       })
       .filter((x) => x.expectedLoss > 0)
       .sort((a, b) => b.expectedLoss - a.expectedLoss)
       .slice(0, 4);
-  }, [offense, trend, summary]);
+  }, [offense, trend, summary, traitCardMap]);
 
   const defenseBars = useMemo(() => {
     if (!defense) return [];
@@ -374,6 +431,14 @@ export default function ImprovePage() {
     }));
   }, [winConTrend, master]);
 
+  const playerLabel = useMemo(() => {
+    if (!player) return "(not selected)";
+    const selectedPlayer = playersData?.players.find((p) => p.player_tag === player.player_tag);
+    const selectedDeck = selectedPlayer?.decks.find((d) => d.my_deck_key === deckKey);
+    const deckName = selectedDeck?.deck_name?.trim() ? selectedDeck.deck_name : "No Name";
+    return `${player.player_name} (${player.player_tag}) - ${deckName}`;
+  }, [deckKey, player, playersData]);
+
   const issueLine = priorityIssue
     ? priorityIssue.side === "attack"
       ? `Your attack is often stopped by ${priorityIssue.label} (win-rate ${signedPct(priorityIssue.deltaVsBaseline)})`
@@ -384,7 +449,7 @@ export default function ImprovePage() {
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Improve</h1>
-        <div className="mt-1 text-xs text-slate-500">Pick one plan for your next 5 matches.</div>
+        <div className="mt-1 text-xs text-slate-500">{playerLabel}</div>
       </div>
 
       {err ? <ApiErrorPanel detail={err} /> : null}
@@ -401,8 +466,11 @@ export default function ImprovePage() {
               Decision: Prioritize {priorityIssue?.side === "defense" ? "Defense" : "Attack"} first
               {priorityIssue ? ` (encounter ${pct(priorityIssue.encounterRate)} / battles ${priorityIssue.battles})` : ""}
             </div>
-            {priorityIssue?.exampleCards.length ? (
-              <div className="mt-2 text-xs text-slate-600">Example cards: {priorityIssue.exampleCards.join(" / ")}</div>
+            {priorityIssue ? (
+              <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-600">Example cards</summary>
+                <CardThumbGrid cards={priorityIssue.exampleCards ?? []} master={master} />
+              </details>
             ) : null}
             <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
               <summary className="cursor-pointer text-xs font-semibold text-slate-600">How to read Issue / EL</summary>
@@ -435,7 +503,7 @@ export default function ImprovePage() {
 
             {whyTab === "attack" ? (
               <>
-                <OffenseCompareBars items={offenseCompare} />
+                <OffenseCompareBars items={offenseCompare} master={master} />
               </>
             ) : (
               <>

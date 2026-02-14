@@ -269,6 +269,40 @@ export async function statsPriorityLast(env, playerTagDb, myDeckKey, last) {
 
 /** ---------- stats: my decks list (filtered by player_tag) ---------- */
 
+export async function statsMyDecksSeasons(env, playerTagDb, since) {
+  const total = await oneNumber(
+    env,
+    `
+    SELECT COUNT(*) AS total_battles
+    FROM battles
+    WHERE player_tag = ?
+      AND result IN ('win','loss')
+      AND (? IS NULL OR battle_time >= ?);
+    `,
+    [playerTagDb, since, since]
+  );
+
+  if (total === 0) return { total_battles: 0, decks: [] };
+
+  const r = await env.DB.prepare(
+    `
+    SELECT
+      b.my_deck_key,
+      d.deck_name,
+      COUNT(*) AS battles
+    FROM battles b
+    LEFT JOIN my_decks d ON d.my_deck_key = b.my_deck_key
+    WHERE b.player_tag = ?
+      AND b.result IN ('win','loss')
+      AND (? IS NULL OR b.battle_time >= ?)
+    GROUP BY b.my_deck_key, d.deck_name
+    ORDER BY battles DESC;
+    `
+  ).bind(playerTagDb, since, since).all();
+
+  return { total_battles: total, decks: r.results || [] };
+}
+
 export async function statsMyDecksLast(env, playerTagDb, last) {
   const total = await oneNumber(
     env,

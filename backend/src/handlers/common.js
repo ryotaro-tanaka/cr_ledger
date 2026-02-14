@@ -2,7 +2,8 @@ import { clampInt, json, readJson } from "../http.js";
 import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
 import { crCards } from "../cr_api.js";
-import { statsMyDecksLast } from "../db/analytics/legacy.js";
+import { statsMyDecksSeasons } from "../db/analytics/legacy.js";
+import { findSeasonLowerBound } from "../db/decks.js";
 import {
   listPlayers,
   updateDeckName,
@@ -21,6 +22,7 @@ const TRAIT_FIELDS = [
 ];
 
 const SLOT_KINDS = ["normal", "evolution", "hero", "support"];
+const SLOT_KIND_ORDER = new Map(SLOT_KINDS.map((kind, idx) => [kind, idx]));
 
 function toTraitBool(value) {
   if (value === null || value === undefined) return true;
@@ -69,14 +71,16 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
 }
 
 export async function handleCommonPlayers(env, url) {
-  const last = clampInt(url.searchParams.get("last"), 1, 5000, 200);
+  const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
+  const since = await findSeasonLowerBound(env, seasons);
+
   const { players } = await listPlayers(env);
 
   const detailed = [];
 
   for (const player of players) {
     const playerTagDb = player.player_tag;
-    const stats = await statsMyDecksLast(env, playerTagDb, last);
+    const stats = await statsMyDecksSeasons(env, playerTagDb, since);
 
     const decks = [];
     for (const deck of stats.decks || []) {
@@ -97,7 +101,7 @@ export async function handleCommonPlayers(env, url) {
     });
   }
 
-  return json({ ok: true, filter: { last }, players: detailed });
+  return json({ ok: true, filter: { seasons }, players: detailed });
 }
 
 export async function handleCommonUpdateDeckName(req, env) {
@@ -213,28 +217,30 @@ export async function handleCommonTraits(env) {
 
   const allCardIds = new Set([...cardTraitsById.keys(), ...cardTraitKvsById.keys()]);
 
-  const traitToCardIds = new Map();
+  const traitToCards = new Map();
   for (const cardId of allCardIds) {
     const cardTrait = cardTraitsById.get(cardId);
     const kvs = cardTraitKvsById.get(cardId) || [];
 
-    const resolvedTraits = new Set();
     for (const slotKind of SLOT_KINDS) {
       for (const traitKey of resolveCardTraits(cardTrait, kvs, slotKind).keys()) {
-        resolvedTraits.add(traitKey);
+        if (!traitToCards.has(traitKey)) traitToCards.set(traitKey, []);
+        traitToCards.get(traitKey).push({ card_id: Number(cardId), slot_kind: slotKind });
       }
-    }
-
-    for (const traitKey of resolvedTraits) {
-      if (!traitToCardIds.has(traitKey)) traitToCardIds.set(traitKey, []);
-      traitToCardIds.get(traitKey).push(Number(cardId));
     }
   }
 
-  const payload = Array.from(traitToCardIds.entries())
-    .map(([trait_key, card_ids]) => ({
+  const payload = Array.from(traitToCards.entries())
+    .map(([trait_key, cards]) => ({
       trait_key,
-      card_ids: [...new Set(card_ids)].sort((a, b) => a - b),
+      cards: cards
+        .filter((row, idx, arr) => arr.findIndex((x) => x.card_id === row.card_id && x.slot_kind === row.slot_kind) === idx)
+        .sort(
+          (a, b) =>
+            a.card_id - b.card_id ||
+            (SLOT_KIND_ORDER.get(a.slot_kind) ?? Number.MAX_SAFE_INTEGER) -
+              (SLOT_KIND_ORDER.get(b.slot_kind) ?? Number.MAX_SAFE_INTEGER)
+        ),
     }))
     .sort((a, b) => String(a.trait_key).localeCompare(String(b.trait_key)));
 
