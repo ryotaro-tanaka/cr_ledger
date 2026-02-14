@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findSeasonLowerBound } from '../src/db/decks';
-import { statsMyDecksSeasons } from '../src/db/analytics/legacy';
+import { statsMyDecksSeasons } from '../src/db/decks';
 
 describe('season boundary normalization', () => {
   it('findSeasonLowerBound normalizes mixed timestamp formats before sorting', async () => {

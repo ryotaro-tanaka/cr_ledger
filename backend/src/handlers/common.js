@@ -2,8 +2,7 @@ import { clampInt, json, readJson } from "../http.js";
 import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
 import { crCards } from "../cr_api.js";
-import { statsMyDecksSeasons } from "../db/analytics/legacy.js";
-import { findSeasonLowerBound } from "../db/decks.js";
+import { findSeasonLowerBound, statsMyDecksSeasons } from "../db/decks.js";
 import {
   listPlayers,
   updateDeckName,
