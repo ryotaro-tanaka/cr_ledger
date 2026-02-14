@@ -6,6 +6,7 @@ import type {
   DeckOffenseCountersResponse,
   DeckDefenseThreatsResponse,
   TrendTraitsResponse,
+  TrendWinConditionsResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -123,5 +124,12 @@ export function getDeckDefenseThreats(myDeckKey: string, seasons = 2): Promise<D
 export function getTrendTraits(playerTag: string, seasons = 2): Promise<TrendTraitsResponse> {
   return request<TrendTraitsResponse>(`/api/trend/${encodeURIComponent(playerTag)}/traits`, {
     params: { seasons },
+  });
+}
+
+
+export function getTrendWinConditions(playerTag: string, last = 200): Promise<TrendWinConditionsResponse> {
+  return request<TrendWinConditionsResponse>("/api/trend/win-conditions", {
+    params: { player_tag: playerTag, last },
   });
 }
