@@ -1,6 +1,7 @@
 import { clampInt, json, readJson } from "../http.js";
 import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
+import { crCards } from "../cr_api.js";
 import { statsMyDecksLast } from "../db/analytics/legacy.js";
 import { listPlayers, updateDeckName, getMyDeckCards } from "../db/read.js";
 
@@ -87,3 +88,32 @@ export async function handleCommonSync(req, env) {
   return json(out, 200);
 }
 
+export async function handleCommonCards(req, env) {
+  const url = new URL(req.url);
+  const bypass = url.searchParams.get("nocache") === "1";
+
+  const cache = caches.default;
+  const cacheKey = new Request(url.toString(), req);
+
+  if (!bypass) {
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+  }
+
+  const data = await crCards(env);
+
+  const payload = {
+    ok: true,
+    source: "proxy.royaleapi.dev",
+    items: Array.isArray(data?.items) ? data.items : [],
+    supportItems: Array.isArray(data?.supportItems) ? data.supportItems : [],
+  };
+
+  const res = json(payload, 200, { "Cache-Control": "public, max-age=43200" });
+
+  if (!bypass) {
+    await cache.put(cacheKey, res.clone());
+  }
+
+  return res;
+}

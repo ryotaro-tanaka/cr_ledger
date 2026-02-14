@@ -3,6 +3,7 @@ import { listPlayers } from "./db/read.js";
 import { syncCore } from "./sync.js";
 import { handleRoot } from "./handlers/core.js";
 import {
+  handleCommonCards,
   handleCommonPlayers,
   handleCommonSync,
   handleCommonUpdateDeckName,
@@ -12,17 +13,6 @@ import {
   handleDeckOffenseCounters,
   handleDeckSummary,
 } from "./handlers/decks.js";
-import {
-  handleCards,
-  handleMyDeckCards,
-  handleMyDecks,
-  handleOpponentTrend,
-  handleMatchupByCard,
-  handlePlayers,
-  handlePriority,
-  handleSyncHttp,
-  handleUpdateDeckName,
-} from "./handlers/legacy.js";
 import { handleTrendTraits, handleTrendWinConditions } from "./handlers/trend.js";
 
 /** ---------- worker ---------- */
@@ -52,33 +42,19 @@ export default {
         }
 
         const trendPrefix = "/api/trend/";
-        const trendSuffix = "/traits";
-        if (path.startsWith(trendPrefix) && path.endsWith(trendSuffix)) {
+        const traitsSuffix = "/traits";
+        if (path.startsWith(trendPrefix) && path.endsWith(traitsSuffix)) {
           return await handleTrendTraits(env, url, path);
+        }
+
+        const winConditionsSuffix = "/win-conditions";
+        if (path.startsWith(trendPrefix) && path.endsWith(winConditionsSuffix)) {
+          return await handleTrendWinConditions(env, url, path);
         }
       }
 
       return route(req, env, url, {
         "GET /": async () => await handleRoot(),
-
-        // legacy endpoints (to be replaced)
-        "GET /api/cards": async (req, env) => await handleCards(req, env),
-
-        "GET /api/players": async (_req, env, _url) => await handlePlayers(env),
-
-        "GET /api/my-deck-cards": async (_req, env, url) => await handleMyDeckCards(env, url),
-
-        "POST /api/sync": async (_req, env, url) => await handleSyncHttp(env, url),
-
-        "GET /api/stats/my-decks": async (_req, env, url) => await handleMyDecks(env, url),
-
-        "GET /api/stats/opponent-trend": async (_req, env, url) => await handleOpponentTrend(env, url),
-
-        "GET /api/stats/matchup-by-card": async (_req, env, url) => await handleMatchupByCard(env, url),
-
-        "GET /api/stats/priority": async (_req, env, url) => await handlePriority(env, url),
-
-        "PATCH /api/my-decks/name": async (req, env) => await handleUpdateDeckName(req, env),
 
         // common utility endpoints
         "GET /api/common/players": async (_req, env, url) => await handleCommonPlayers(env, url),
@@ -87,9 +63,8 @@ export default {
 
         "POST /api/common/sync": async (req, env) => await handleCommonSync(req, env),
 
-        "GET /api/common/cards": async (req, env) => await handleCards(req, env),
+        "GET /api/common/cards": async (req, env) => await handleCommonCards(req, env),
 
-        "GET /api/trend/win-conditions": async (_req, env, url) => await handleTrendWinConditions(env, url),
       });
     });
   },

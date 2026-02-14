@@ -1,11 +1,10 @@
 # API仕様 (CR_ledger) — Current
 
-このドキュメントは現行（Current）APIの仕様です。legacy API は `docs/api/legacy.md` を参照してください。
+このドキュメントは現行APIの仕様です。
 
-## 位置づけ（Current / Legacy）
+## 位置づけ
 
-- Current: 新規実装・今後のフロント移行先。
-- Legacy: 現在のフロントが利用中。互換維持対象だが将来的に廃止予定。
+- Current: 本番利用中かつ継続運用対象。
 
 ## Base URL
 
@@ -66,29 +65,7 @@ Response schema (200):
 - プレーンテキスト
 
 Notes:
-- このルートは legacy ではなく current の継続運用対象。
-
-## GET /api/common/player
-
-単一プレイヤー取得用の分割エンドポイント（将来拡張用）です。
-
-Request:
-- Auth: Required
-- Path Params: なし
-- Query Params: 仕様策定中
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。実装時にこの節を更新する。
-- `/api/common/players` の肥大化対策として必要になる想定。
+- 現行 API の継続運用対象。
 
 ## GET /api/common/players
 
@@ -125,7 +102,7 @@ Response schema (200):
       - `slot_kind`: `normal | evolution | hero | support`
 
 Notes:
-- legacy の `players / my-decks / my-deck-cards` 相当を統合した current API。
+- 旧来の複数 API (`players / my-decks / my-deck-cards`) を統合した API。
 
 ## PATCH /api/common/my-decks/name
 
@@ -154,7 +131,7 @@ Response schema (200):
 - `deck_name`: string
 
 Notes:
-- legacy `PATCH /api/my-decks/name` と互換。
+- 旧来のデッキ名更新 API と同等の挙動。
 
 ## POST /api/common/sync
 
@@ -190,7 +167,7 @@ Response schema (200):
   - `reason?`: string
 
 Notes:
-- current では `player_tag` を JSON Body で渡す（legacy は query）。
+- `player_tag` は JSON Body で渡す。
 
 ## GET /api/common/cards
 
@@ -224,17 +201,17 @@ Response schema (200):
 - `supportItems[]`: サポートカード
 
 Notes:
-- legacy `GET /api/cards` の current 版。
+- 現行のカードマスタ取得エンドポイント。
 
-## GET /api/trend/win-conditions
+## GET /api/trend/{player_tag}/win-conditions
 
 相手デッキの win_condition 分布を fractional ポイントで集計します。
 
 Request:
 - Auth: Required
-- Path Params: なし
+- Path Params:
+  - `player_tag`: string
 - Query Params:
-  - `player_tag`: string (required)
   - `last`: number (optional, default 200, max 5000)
 - JSON Body: なし
 
@@ -243,7 +220,7 @@ Responses:
 - 500: サーバ内部エラー
 
 Response example (200):
-- `docs/api/examples.md` の「GET /api/trend/win-conditions」を参照。
+- `docs/api/examples.md` の「GET /api/trend/{player_tag}/win-conditions」を参照。
 
 Response schema (200):
 - `ok`: boolean
@@ -259,27 +236,6 @@ Notes:
 - 1試合あたり総ポイントは 1。
 - 相手側 win_condition が `k` 枚なら各カードに `1/k` を配分。
 - 0枚なら `no_win_condition_points` に 1 を加算。
-
-## GET /api/trend/pair/win-condition
-
-win_condition の組み合わせ傾向を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params: なし
-- Query Params: 未定
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。実装・スキーマともに未確定。
 
 ## GET /api/trend/{player_tag}/traits
 
@@ -319,76 +275,6 @@ Notes:
 - 1バトル=1サンプル。
 - `trait_count` は相手デッキ内で当該traitが true のカード枚数。
 - trait 判定ルールは `docs/db/notes.md` の「Traits Resolve（API参照）」を参照。
-
-## GET /api/decks/{my_deck_key}/matchups/by-traits
-
-デッキの対 trait 勝率を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params:
-  - `my_deck_key`: string
-- Query Params:
-  - `last`: number (optional, default 200, max 5000)
-  - `seasons`: number (optional, default 2)
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。
-- 仕様策定中のため、スキーマは実装時に確定する。
-
-## GET /api/decks/{my_deck_key}/matchups/by-win-condition
-
-デッキの対 win_condition 勝率を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params:
-  - `my_deck_key`: string
-- Query Params: 未定
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。実装・スキーマともに未確定。
-
-## GET /api/decks/{my_deck_key}/traits
-
-デッキの trait 集計を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params:
-  - `my_deck_key`: string
-- Query Params: 未定
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 500: サーバ内部エラー
-- 404: ルート未提供（現状未実装）
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。
-- 同等情報は現時点では `/api/decks/{my_deck_key}/summary` に含まれる。
 
 ## GET /api/decks/{my_deck_key}/summary
 

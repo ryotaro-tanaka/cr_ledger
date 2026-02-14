@@ -1,5 +1,4 @@
 import { clampInt, json } from "../http.js";
-import { requirePlayerTagDb } from "../params.js";
 import { normalizeTagForDb } from "../domain.js";
 
 const BASE_TRAIT_KEYS = [
@@ -55,9 +54,8 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
   return resolved;
 }
 
-function parsePlayerTagFromTrendPath(path) {
+function parsePlayerTagFromTrendPath(path, suffix) {
   const prefix = "/api/trend/";
-  const suffix = "/traits";
 
   const raw = path.slice(prefix.length, path.length - suffix.length);
   const decoded = decodeURIComponent(raw || "").trim();
@@ -67,7 +65,7 @@ function parsePlayerTagFromTrendPath(path) {
 }
 
 export async function handleTrendTraits(env, url, path) {
-  const playerTagDb = parsePlayerTagFromTrendPath(path);
+  const playerTagDb = parsePlayerTagFromTrendPath(path, "/traits");
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
 
   const seasonRows = await env.DB.prepare(
@@ -251,8 +249,8 @@ export async function handleTrendTraits(env, url, path) {
   });
 }
 
-export async function handleTrendWinConditions(env, url) {
-  const playerTagDb = requirePlayerTagDb(url);
+export async function handleTrendWinConditions(env, url, path) {
+  const playerTagDb = parsePlayerTagFromTrendPath(path, "/win-conditions");
   const last = clampInt(url.searchParams.get("last"), 1, 5000, 200);
 
   const totals = await env.DB.prepare(

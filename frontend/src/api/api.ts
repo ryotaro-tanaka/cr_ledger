@@ -129,7 +129,7 @@ export function getTrendTraits(playerTag: string, seasons = 2): Promise<TrendTra
 
 
 export function getTrendWinConditions(playerTag: string, last = 200): Promise<TrendWinConditionsResponse> {
-  return request<TrendWinConditionsResponse>("/api/trend/win-conditions", {
-    params: { player_tag: playerTag, last },
+  return request<TrendWinConditionsResponse>(`/api/trend/${encodeURIComponent(playerTag)}/win-conditions`, {
+    params: { last },
   });
 }
