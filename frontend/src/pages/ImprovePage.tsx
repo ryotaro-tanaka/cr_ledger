@@ -384,7 +384,7 @@ export default function ImprovePage() {
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Improve</h1>
-        <div className="mt-1 text-xs text-slate-500">Use Issue / Why / Action to decide one plan for your next 5 matches.</div>
+        <div className="mt-1 text-xs text-slate-500">Pick one plan for your next 5 matches.</div>
       </div>
 
       {err ? <ApiErrorPanel detail={err} /> : null}
@@ -393,7 +393,7 @@ export default function ImprovePage() {
       {!loading && !err ? (
         <>
           <SectionCard>
-            <div className="text-sm font-semibold text-slate-900">Issue (Top priority now)</div>
+            <div className="text-sm font-semibold text-slate-900">Issue</div>
             <div className="mt-2 text-sm font-semibold text-slate-900">{issueLine}</div>
             <div className="mt-1 text-xs text-slate-600">Attack Issue: {attackIssue ? `${attackIssue.label} / EL ${attackIssue.expectedLoss.toFixed(1)}` : "Not enough data"}</div>
             <div className="mt-1 text-xs text-slate-600">Defense Issue: {defenseIssue ? `${defenseIssue.label} / EL ${defenseIssue.expectedLoss.toFixed(1)}` : "Not enough data"}</div>
@@ -404,35 +404,41 @@ export default function ImprovePage() {
             {priorityIssue?.exampleCards.length ? (
               <div className="mt-2 text-xs text-slate-600">Example cards: {priorityIssue.exampleCards.join(" / ")}</div>
             ) : null}
+            <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">How to read Issue / EL</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                <li>EL means expected loss: larger value = bigger likely impact on wins.</li>
+                <li>Attack and Defense are ranked separately, then compared for one final priority.</li>
+                <li>Issue filters remove always-on or low-confidence signals.</li>
+              </ul>
+            </details>
           </SectionCard>
 
           <SectionCard>
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-900">Why (Evidence)</div>
+              <div className="text-sm font-semibold text-slate-900">Why</div>
               <div className="flex gap-1 rounded-xl bg-slate-100 p-1 text-xs">
                 <button
                   onClick={() => setWhyTab("attack")}
                   className={`rounded-lg px-2 py-1 ${whyTab === "attack" ? "bg-white text-slate-900" : "text-slate-600"}`}
                 >
-                  Meta vs your deck (attack)
+                  Attack
                 </button>
                 <button
                   onClick={() => setWhyTab("defense")}
                   className={`rounded-lg px-2 py-1 ${whyTab === "defense" ? "bg-white text-slate-900" : "text-slate-600"}`}
                 >
-                  Defense threats (cards)
+                  Defense
                 </button>
               </div>
             </div>
 
             {whyTab === "attack" ? (
               <>
-                <div className="mt-2 text-xs text-slate-600">Compare top traits by meta average card count and your deck count (with expected loss and win-rate delta).</div>
                 <OffenseCompareBars items={offenseCompare} />
               </>
             ) : (
               <>
-                <div className="mt-2 text-xs text-slate-600">Top threats ranked by expected loss, with win-rate delta and encounter rate.</div>
                 <DefenseBars items={defenseBars} />
               </>
             )}
@@ -442,10 +448,17 @@ export default function ImprovePage() {
                 Meta win conditions Top 3: {trendTopWinCons.map((x) => `${x.name} ${pct(x.rate)}`).join(" / ")}
               </div>
             ) : null}
+            <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">How to read Why</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                <li>Attack tab compares meta average count vs your deck count per trait.</li>
+                <li>Defense tab ranks threats by EL, with win-rate delta and encounter rate.</li>
+              </ul>
+            </details>
           </SectionCard>
 
           <SectionCard>
-            <div className="text-sm font-semibold text-slate-900">Action (Plans to test)</div>
+            <div className="text-sm font-semibold text-slate-900">Action</div>
             {selectedAction ? (
               <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
                 Pinned note: {selectedAction.title}
@@ -462,12 +475,19 @@ export default function ImprovePage() {
                     onClick={() => setSelectedActionId(a.id)}
                     className={`mt-2 rounded-xl px-3 py-1.5 text-xs font-medium ${selectedActionId === a.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
                   >
-                    Use this plan
+                    Select
                   </button>
                 </div>
               ))}
             </div>
             <div className="mt-2 text-[11px] text-slate-500">Suggestions are based on statistical correlation, not guaranteed causation.</div>
+            <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">What to keep / cut</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                <li>Keep: one selected plan and two validation checks.</li>
+                <li>Cut: extra plan details that do not change your next 5-match test.</li>
+              </ul>
+            </details>
           </SectionCard>
         </>
       ) : null}

@@ -18,6 +18,8 @@ All endpoints are fetched in parallel.
 2. **Why**: one evidence area (tab switch)
 3. **Action**: 2-3 plans with verification axis
 
+Section titles are intentionally short in UI: `Issue`, `Why`, `Action`.
+
 ## 1) Issue selection
 
 Attack/Defense are ranked separately first, then final priority is chosen.
@@ -70,7 +72,17 @@ Each plan includes:
 - current state
 - **next 5 battles verification metrics**
 
-CTA `この方針で検討` pins one memo.
+CTA uses short label `Select` to avoid wrapping on small screens.
+
+## Progressive explanation (accordion)
+
+Each section has a collapsed `<details>` guide:
+
+- `How to read Issue / EL`
+- `How to read Why`
+- `What to keep / cut`
+
+This keeps default UI concise while still explaining EL and chart interpretation for users who need it.
 
 ## Notes
 
