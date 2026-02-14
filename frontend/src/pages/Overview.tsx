@@ -346,7 +346,6 @@ export default function Overview() {
 
     return [
       deckTypeAnalysis?.typeSummaryLine ?? "Deck type is unknown.",
-      `Deck style: ${deckTypeAnalysis?.styleLabel ?? "Unknown"}`,
       `Average elixir: ${avgCost}`,
       `Air resistance: ${airRes}`,
       `Swarm resistance: ${swarmRes}`,

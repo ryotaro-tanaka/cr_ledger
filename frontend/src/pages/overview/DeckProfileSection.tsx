@@ -9,7 +9,18 @@ type Props = {
   weaknesses: string[];
 };
 
+function splitMetricLine(line: string) {
+  const idx = line.indexOf(":");
+  if (idx < 0) return null;
+  return {
+    label: line.slice(0, idx).trim(),
+    value: line.slice(idx + 1).trim(),
+  };
+}
+
 export default function DeckProfileSection({ loading, deckIdentityLines, tacticalNotes, typeScoreNote, strengths, weaknesses }: Props) {
+  const [headline, ...metricLines] = deckIdentityLines;
+
   return (
     <SectionCard>
       <div className="text-sm font-semibold text-slate-900">Deck profile</div>
@@ -19,10 +30,23 @@ export default function DeckProfileSection({ loading, deckIdentityLines, tactica
 
       {!loading ? (
         <div className="mt-4 space-y-4">
-          <div className="space-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
-            {deckIdentityLines.map((line) => (
-              <div key={line}>- {line}</div>
-            ))}
+          {headline ? (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-900">
+              {headline}
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-2 gap-2">
+            {metricLines.map((line) => {
+              const metric = splitMetricLine(line);
+              if (!metric) return null;
+              return (
+                <div key={line} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{metric.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{metric.value}</div>
+                </div>
+              );
+            })}
           </div>
 
           <div>
