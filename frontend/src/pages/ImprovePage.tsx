@@ -248,8 +248,10 @@ export default function ImprovePage() {
   const traitCardMap = useMemo(() => {
     if (!commonTraits) return new Map<string, CardThumb[]>();
     const byTrait = new Map<string, CardThumb[]>();
-    for (const row of commonTraits.traits) {
-      const normalized = row.cards
+    const traits = Array.isArray(commonTraits.traits) ? commonTraits.traits : [];
+    for (const row of traits) {
+      const cards = Array.isArray(row.cards) ? row.cards : [];
+      const normalized = cards
         .filter((c): c is CardThumb => Number.isFinite(c?.card_id) && typeof c?.slot_kind === "string")
         .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
 
