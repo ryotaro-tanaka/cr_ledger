@@ -107,6 +107,18 @@ Response example (200):
 }
 ```
 
+## GET /api/common/traits
+
+Response example (200):
+```json
+{
+  "ok": true,
+  "traits": [
+    { "trait_key": "stun", "card_ids": [10000, 1000001, 122201] }
+  ]
+}
+```
+
 ## GET /api/trend/{player_tag}/win-conditions
 
 Response example (200):
