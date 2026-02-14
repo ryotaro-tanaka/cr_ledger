@@ -3,6 +3,7 @@ import SectionCard from "../components/SectionCard";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import { useSelection } from "../lib/selection";
 import { useCardMaster } from "../cards/useCardMaster";
+import { useCommonPlayers } from "../lib/commonPlayers";
 import { toErrorText } from "../lib/errors";
 import {
   getDeckDefenseThreats,
@@ -164,6 +165,7 @@ function DefenseBars({
 export default function ImprovePage() {
   const { player, deckKey } = useSelection();
   const { master } = useCardMaster();
+  const { data: playersData } = useCommonPlayers();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [offense, setOffense] = useState<DeckOffenseCountersResponse | null>(null);
@@ -374,6 +376,14 @@ export default function ImprovePage() {
     }));
   }, [winConTrend, master]);
 
+  const playerLabel = useMemo(() => {
+    if (!player) return "(not selected)";
+    const selectedPlayer = playersData?.players.find((p) => p.player_tag === player.player_tag);
+    const selectedDeck = selectedPlayer?.decks.find((d) => d.my_deck_key === deckKey);
+    const deckName = selectedDeck?.deck_name?.trim() ? selectedDeck.deck_name : "No Name";
+    return `${player.player_name} (${player.player_tag}) - ${deckName}`;
+  }, [deckKey, player, playersData]);
+
   const issueLine = priorityIssue
     ? priorityIssue.side === "attack"
       ? `Your attack is often stopped by ${priorityIssue.label} (win-rate ${signedPct(priorityIssue.deltaVsBaseline)})`
@@ -384,7 +394,7 @@ export default function ImprovePage() {
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Improve</h1>
-        <div className="mt-1 text-xs text-slate-500">Pick one plan for your next 5 matches.</div>
+        <div className="mt-1 text-xs text-slate-500">{playerLabel}</div>
       </div>
 
       {err ? <ApiErrorPanel detail={err} /> : null}

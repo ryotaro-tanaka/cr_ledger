@@ -32,34 +32,34 @@ const DECK_TYPE_LABEL: Record<DeckTypeKey, string> = {
 
 const TACTICAL_GUIDE: Record<DeckTypeKey, string[]> = {
   cycle: [
-    "低コストで守って素早く再展開し、継続的な小ダメージを積み上げる。",
-    "防衛にエリクサーを使い過ぎず、次の攻めを常に準備する。",
-    "無理な全力攻めより、回転差で有利交換を重ねる。",
+    "Defend efficiently with low-cost cards and keep reapplying chip pressure.",
+    "Do not overspend on defense; always preserve elixir for the next cycle.",
+    "Prioritize repeated positive trades over one all-in push.",
   ],
   bait: [
-    "相手の小型呪文や範囲回答を先に使わせる展開を作る。",
-    "同じ回答で受けづらい攻め筋を時間差で重ねる。",
-    "配置を固定せず、相手の読みを外してミスを誘う。",
+    "Force out the opponent's small spell and splash answers first.",
+    "Layer threats that are awkward to answer with the same card.",
+    "Vary placements and timing to make defensive reads harder.",
   ],
   beatdown: [
-    "大型ユニットを軸に、1回の強い形でタワーを削り切る。",
-    "序盤は無理に取り返さず、エリクサーを貯めて主導権を作る。",
-    "本命の攻め前に、相手の主要防衛札を引き出しておく。",
+    "Build around a heavy core push and aim to convert one big attack.",
+    "Accept some early damage while banking elixir for your power turn.",
+    "Bait key defensive tools before committing your main push.",
   ],
   control: [
-    "守備で小さく有利を取り、カウンターで差を広げる。",
-    "相手の攻めを最小コストで止める配置と順番を重視する。",
-    "片側に固執せず、相手の薄い瞬間を見て圧を切り替える。",
+    "Gain small defensive advantages, then convert with counters.",
+    "Focus on low-cost, high-value defensive sequencing and placements.",
+    "Switch pressure lanes when the opponent's coverage is thin.",
   ],
   siege: [
-    "射程優位を押し付け、防衛しながら継続的に削る。",
-    "本命を置く前に、相手の突破札と呪文回転を確認する。",
-    "守りの形を崩さず、無理な追撃より盤面維持を優先する。",
+    "Leverage range advantage and chip while holding a stable defense.",
+    "Track opponent break-through cards and spell cycle before committing.",
+    "Protect structure and board control over unnecessary overcommitment.",
   ],
   bridge_spam: [
-    "橋前の即圧で相手に判断を迫り、反応遅れを狙う。",
-    "片側に寄せすぎず、逆サイド圧で受けを分散させる。",
-    "攻め急ぎで防衛が薄くなりやすいので、反撃ラインを常に意識する。",
+    "Apply immediate bridge pressure to force rushed decisions.",
+    "Split pressure across lanes instead of overcommitting to one side.",
+    "Keep enough elixir for defense because counter-punish risk is high.",
   ],
 };
 
@@ -77,7 +77,6 @@ export default function Overview() {
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<DeckSummaryResponse | null>(null);
 
-  const playerLabel = player ? `${player.player_name} (${player.player_tag})` : "(not selected)";
 
   useEffect(() => {
     if (!deckKey) {
@@ -108,6 +107,12 @@ export default function Overview() {
     const selectedPlayer = playersData?.players.find((p) => p.player_tag === player?.player_tag);
     return selectedPlayer?.decks.find((d) => d.my_deck_key === deckKey) ?? null;
   }, [playersData, player?.player_tag, deckKey]);
+
+  const playerLabel = useMemo(() => {
+    if (!player) return "(not selected)";
+    const deckName = selectedDeckBase?.deck_name?.trim() ? selectedDeckBase.deck_name : "No Name";
+    return `${player.player_name} (${player.player_tag}) - ${deckName}`;
+  }, [player, selectedDeckBase?.deck_name]);
 
   const mergedCards = useMemo<MergedCard[]>(() => {
     const baseCards = selectedDeckBase?.cards ?? [];
@@ -190,100 +195,100 @@ export default function Overview() {
 
     if (averageElixirCost != null && averageElixirCost < 3) {
       scores.cycle += 2;
-      reasons.cycle.push("平均エリクサーが3未満で軽量。");
+      reasons.cycle.push("Average elixir is below 3.0.");
     } else if (averageElixirCost != null && averageElixirCost < 3.3) {
       scores.cycle += 1;
-      reasons.cycle.push("平均エリクサーが比較的軽い。");
+      reasons.cycle.push("Average elixir is relatively low.");
     }
     if (minimumElixirCycle != null && minimumElixirCycle <= 9) {
       scores.cycle += 1;
-      reasons.cycle.push("最小回転が速い。");
+      reasons.cycle.push("Minimum cycle is fast.");
     }
     if (lowCostCount >= 3) {
       scores.cycle += 1;
-      reasons.cycle.push("低コストカード枚数が多い。");
+      reasons.cycle.push("The deck has many low-cost cards.");
     }
     if (winConditionAvgCost != null && winConditionAvgCost <= 4) {
       scores.cycle += 1;
-      reasons.cycle.push("WIN条件のコストが軽め。");
+      reasons.cycle.push("Win-condition cost is relatively low.");
     }
 
     if (swarmLikeCount >= 2) {
       scores.bait += 2;
-      reasons.bait.push("swarm系 trait が多い。");
+      reasons.bait.push("The deck includes many swarm-like traits.");
     } else if (swarmLikeCount === 1) {
       scores.bait += 1;
-      reasons.bait.push("swarm系 trait を含む。");
+      reasons.bait.push("The deck includes swarm-like traits.");
     }
     if (deployAnywhereCount >= 1) {
       scores.bait += 1;
-      reasons.bait.push("deploy_anywhere があり回答を釣りやすい。");
+      reasons.bait.push("deploy_anywhere helps bait out responses.");
     }
     if (outrangeTowerCount >= 1) {
       scores.bait += 1;
-      reasons.bait.push("outrange_tower があり削り継続性が高い。");
+      reasons.bait.push("outrange_tower improves sustained chip pressure.");
     }
     if (spawnsUnitsCount >= 1) {
       scores.bait += 1;
-      reasons.bait.push("spawns_units で受け側の対応を分散させやすい。");
+      reasons.bait.push("spawns_units makes defensive responses more awkward.");
     }
 
     if (averageElixirCost != null && averageElixirCost >= 4) {
       scores.beatdown += 2;
-      reasons.beatdown.push("平均エリクサーが重い。");
+      reasons.beatdown.push("Average elixir is heavy.");
     } else if (averageElixirCost != null && averageElixirCost >= 3.8) {
       scores.beatdown += 1;
-      reasons.beatdown.push("平均エリクサーがやや重い。");
+      reasons.beatdown.push("Average elixir is moderately heavy.");
     }
     if (minimumElixirCycle != null && minimumElixirCycle >= 13) {
       scores.beatdown += 1;
-      reasons.beatdown.push("最小回転が遅め。");
+      reasons.beatdown.push("Minimum cycle is slow.");
     }
     if (winConditionAvgCost != null && winConditionAvgCost >= 5) {
       scores.beatdown += 2;
-      reasons.beatdown.push("WIN条件が高コスト寄り。");
+      reasons.beatdown.push("Win-condition cost is high.");
     } else if (winConditionAvgCost != null && winConditionAvgCost >= 4.5) {
       scores.beatdown += 1;
-      reasons.beatdown.push("WIN条件がやや重い。");
+      reasons.beatdown.push("Win-condition cost is somewhat heavy.");
     }
 
     if (outrangeTowerCount >= 1) {
       scores.siege += 3;
-      reasons.siege.push("outrange_tower trait を持つ。");
+      reasons.siege.push("The deck has outrange_tower traits.");
     }
     if (winConBuildingCount >= 1) {
       scores.siege += 2;
-      reasons.siege.push("建物WIN条件を含む。");
+      reasons.siege.push("Includes a building-based win condition.");
     }
     if (buildingCount >= 2) {
       scores.siege += 1;
-      reasons.siege.push("建物が複数枚ある。");
+      reasons.siege.push("Includes multiple buildings.");
     }
 
     if (buildingCount === 0) {
       scores.bridge_spam += 1;
-      reasons.bridge_spam.push("building がなく攻撃寄り。");
+      reasons.bridge_spam.push("No building cards, so the deck is pressure-oriented.");
     }
     if (isAirCount + canDamageAirCount + antiAirClassCount <= 1) {
       scores.bridge_spam += 1;
-      reasons.bridge_spam.push("対空要素が少なめ。");
+      reasons.bridge_spam.push("Air coverage is relatively low.");
     }
     if (averageElixirCost != null && averageElixirCost >= 3.3 && averageElixirCost <= 4.2) {
       scores.bridge_spam += 1;
-      reasons.bridge_spam.push("中量帯で橋前圧を作りやすい。");
+      reasons.bridge_spam.push("Elixir band supports bridge pressure patterns.");
     }
 
     if (averageElixirCost != null && averageElixirCost >= 3 && averageElixirCost <= 4) {
       scores.control += 1;
-      reasons.control.push("平均エリクサーが中庸。");
+      reasons.control.push("Average elixir is in the mid range.");
     }
     if (buildingCount === 1) {
       scores.control += 1;
-      reasons.control.push("防衛建物1枚で受け中心を作りやすい。");
+      reasons.control.push("One defensive building supports control pacing.");
     }
     if (minimumElixirCycle != null && minimumElixirCycle >= 10 && minimumElixirCycle <= 12) {
       scores.control += 1;
-      reasons.control.push("回転が極端でなく受け反撃に寄る。");
+      reasons.control.push("Cycle speed is balanced for defend-and-counter play.");
     }
 
     const sorted = Object.entries(scores)
@@ -305,9 +310,9 @@ export default function Overview() {
       normalizedScores,
       topReasons,
       tacticalGuide: primaryType ? TACTICAL_GUIDE[primaryType] : [
-        `上位候補は ${DECK_TYPE_LABEL[topType]} / ${DECK_TYPE_LABEL[secondType]}。`,
-        "序盤は受けの安定を優先し、相手の主要回答を見てから勝ち筋を選ぶ。",
-        "片側だけに固執せず、エリクサー有利を作れる場面を逃さない。",
+        `Top candidates: ${DECK_TYPE_LABEL[topType]} / ${DECK_TYPE_LABEL[secondType]}.`,
+        "Prioritize stable defense early, then choose a win path after identifying key counters.",
+        "Do not lock into one lane; convert any elixir lead into pressure.",
       ],
     };
   }, [averageElixirCost, baseCardsWithCost, data, master, mergedCards, minimumElixirCycle]);
