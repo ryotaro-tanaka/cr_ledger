@@ -48,6 +48,7 @@
 - Air耐性: `can_damage_air` trait 数をベースに判定し、`anti_air` class がある場合は少し加点
 - Swarm耐性: `aoe` trait 数で 高め/普通/低め
 - Giant耐性: `card_type=building` の枚数をベースに、`inferno` trait と `anti_tank` class で加点
+- Building耐性: `deploy_anywhere` と `outrange_tower` trait で加点し、`primary_target_buildings` が2つ以上ならさらに加点
 - サイクル速度:
   - `minimumElixirCycle <= 9` -> 高速
   - `<= 12` -> 中速

@@ -128,12 +128,18 @@ export default function Overview() {
     const buildingCardCount = data.cards.filter((card) => card.card_type === "building").length;
     const giantScore = buildingCardCount + traitCount("inferno") * 0.5 + classCount("anti_tank") * 0.5;
     const giantRes = giantScore >= 2.5 ? "High" : giantScore >= 1.5 ? "Medium" : "Low";
+    const deployAnywhereCount = traitCount("deploy_anywhere");
+    const outrangeTowerCount = traitCount("outrange_tower");
+    const primaryTargetBuildingsCount = traitCount("primary_target_buildings");
+    const buildingScore = deployAnywhereCount * 0.5 + outrangeTowerCount * 0.5 + (primaryTargetBuildingsCount >= 2 ? 0.5 : 0);
+    const buildingRes = buildingScore >= 1.5 ? "High" : buildingScore >= 0.5 ? "Medium" : "Low";
 
     return [
       `Deck style: ${style}`,
       `Air resistance: ${airRes}`,
       `Swarm resistance: ${swarmRes}`,
       `Giant resistance: ${giantRes}`,
+      `Building resistance: ${buildingRes}`,
       `Cycle speed: ${speed}`,
     ];
   }, [data, minimumElixirCycle]);
