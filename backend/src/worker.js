@@ -4,8 +4,10 @@ import { syncCore } from "./sync.js";
 import { handleRoot } from "./handlers/core.js";
 import {
   handleCommonCards,
+  handleCommonClasses,
   handleCommonPlayers,
   handleCommonSync,
+  handleCommonTraits,
   handleCommonUpdateDeckName,
 } from "./handlers/common.js";
 import {
@@ -64,6 +66,10 @@ export default {
         "POST /api/common/sync": async (req, env) => await handleCommonSync(req, env),
 
         "GET /api/common/cards": async (req, env) => await handleCommonCards(req, env),
+
+        "GET /api/common/classes": async (_req, env) => await handleCommonClasses(env),
+
+        "GET /api/common/traits": async (_req, env) => await handleCommonTraits(env),
 
       });
     });
