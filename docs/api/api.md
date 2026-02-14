@@ -1,11 +1,10 @@
 # API仕様 (CR_ledger) — Current
 
-このドキュメントは現行（Current）APIの仕様です。legacy API は `docs/api/legacy.md` を参照してください。
+このドキュメントは現行APIの仕様です。
 
-## 位置づけ（Current / Legacy）
+## 位置づけ
 
-- Current: 新規実装・今後のフロント移行先。
-- Legacy: 現在のフロントが利用中。互換維持対象だが将来的に廃止予定。
+- Current: 本番利用中かつ継続運用対象。
 
 ## Base URL
 
@@ -66,7 +65,7 @@ Response schema (200):
 - プレーンテキスト
 
 Notes:
-- このルートは legacy ではなく current の継続運用対象。
+- 現行 API の継続運用対象。
 
 ## GET /api/common/player
 
@@ -125,7 +124,7 @@ Response schema (200):
       - `slot_kind`: `normal | evolution | hero | support`
 
 Notes:
-- legacy の `players / my-decks / my-deck-cards` 相当を統合した current API。
+- 旧来の複数 API (`players / my-decks / my-deck-cards`) を統合した API。
 
 ## PATCH /api/common/my-decks/name
 
@@ -154,7 +153,7 @@ Response schema (200):
 - `deck_name`: string
 
 Notes:
-- legacy `PATCH /api/my-decks/name` と互換。
+- 旧来のデッキ名更新 API と同等の挙動。
 
 ## POST /api/common/sync
 
@@ -190,7 +189,7 @@ Response schema (200):
   - `reason?`: string
 
 Notes:
-- current では `player_tag` を JSON Body で渡す（legacy は query）。
+- `player_tag` は JSON Body で渡す。
 
 ## GET /api/common/cards
 
@@ -224,7 +223,7 @@ Response schema (200):
 - `supportItems[]`: サポートカード
 
 Notes:
-- legacy `GET /api/cards` の current 版。
+- 現行のカードマスタ取得エンドポイント。
 
 ## GET /api/trend/win-conditions
 
