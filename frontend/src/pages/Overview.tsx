@@ -103,8 +103,9 @@ export default function Overview() {
     const classCount = (keyIncludes: string) => data.deck_classes.filter((c) => c.class_key.includes(keyIncludes)).reduce((sum, c) => sum + c.count, 0);
 
     const winConCount = classCount("win_condition");
+    const antiAirClassCount = classCount("anti_air");
+    const canDamageAirCount = traitCount("can_damage_air");
     const aoeCount = traitCount("aoe");
-    const airCount = classCount("anti_air") + traitCount("air");
     const buildingCount = classCount("building");
     const swarmLikeCount = traitCount("swarm");
 
@@ -121,16 +122,18 @@ export default function Overview() {
               : "Control";
 
     const speed = minimumElixirCycle == null ? "Unknown" : minimumElixirCycle <= 9 ? "Fast" : minimumElixirCycle <= 12 ? "Mid" : "Slow";
-    const aoeRes = aoeCount >= 4 ? "High" : aoeCount >= 2 ? "Medium" : "Low";
-    const airRes = airCount >= 3 ? "High" : airCount >= 1 ? "Medium" : "Low";
-    const antiSwarmCount = traitCount("aoe") + traitCount("splash");
-    const swarmRes = antiSwarmCount >= 3 ? "High" : antiSwarmCount >= 2 ? "Medium" : "Low";
+    const airScore = canDamageAirCount + antiAirClassCount * 0.5;
+    const airRes = airScore >= 3.5 ? "High" : airScore >= 2 ? "Medium" : "Low";
+    const swarmRes = aoeCount >= 3 ? "High" : aoeCount >= 2 ? "Medium" : "Low";
+    const buildingCardCount = data.cards.filter((card) => card.card_type === "building").length;
+    const giantScore = buildingCardCount + traitCount("inferno") * 0.5 + classCount("anti_tank") * 0.5;
+    const giantRes = giantScore >= 2.5 ? "High" : giantScore >= 1.5 ? "Medium" : "Low";
 
     return [
       `Deck style: ${style}`,
-      `AoE resistance: ${aoeRes}`,
       `Air resistance: ${airRes}`,
       `Swarm resistance: ${swarmRes}`,
+      `Giant resistance: ${giantRes}`,
       `Cycle speed: ${speed}`,
     ];
   }, [data, minimumElixirCycle]);

@@ -45,9 +45,9 @@
 
 ## 耐性・速度・強み弱み
 
-- AoE耐性: `aoe` 系 trait 数で 高め/普通/低め
-- Air耐性: `anti_air` class + `air` trait 数で 高め/普通/低め
-- Swarm耐性: `aoe` + `splash` 系 trait 数で 高め/普通/低め
+- Air耐性: `can_damage_air` trait 数をベースに判定し、`anti_air` class がある場合は少し加点
+- Swarm耐性: `aoe` trait 数で 高め/普通/低め
+- Giant耐性: `card_type=building` の枚数をベースに、`inferno` trait と `anti_tank` class で加点
 - サイクル速度:
   - `minimumElixirCycle <= 9` -> 高速
   - `<= 12` -> 中速
