@@ -236,11 +236,8 @@ export async function handleDeckOffenseCounters(env, url, path) {
     slot_kind: row.slot_kind,
   }));
 
-  const seasonStartTimes = (await findRecentSeasonStartTimes(env, seasons))
-    .map((row) => row.start_time)
-    .filter(Boolean)
-    .sort();
-  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+  const seasonRows = await findRecentSeasonStartTimes(env, seasons);
+  const since = seasonRows.length > 0 ? seasonRows[seasonRows.length - 1].start_time : null;
 
   if (winConditionCards.length === 0) {
     return json({
@@ -388,11 +385,8 @@ export async function handleDeckDefenseThreats(env, url, path) {
     return json({ ok: false, error: "deck not found" }, 404);
   }
 
-  const seasonStartTimes = (await findRecentSeasonStartTimes(env, seasons))
-    .map((row) => row.start_time)
-    .filter(Boolean)
-    .sort();
-  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+  const seasonRows = await findRecentSeasonStartTimes(env, seasons);
+  const since = seasonRows.length > 0 ? seasonRows[seasonRows.length - 1].start_time : null;
 
   const summary = await findDeckBattleSummary(env, decoded, since);
   const totalBattles = Number(summary?.total_battles) || 0;

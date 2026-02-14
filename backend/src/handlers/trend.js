@@ -77,11 +77,8 @@ export async function handleTrendTraits(env, url, path) {
     `
   ).bind(seasons).all();
 
-  const seasonStartTimes = (seasonRows.results || [])
-    .map((row) => row.start_time)
-    .filter(Boolean)
-    .sort();
-  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+  const seasonStarts = seasonRows.results || [];
+  const since = seasonStarts.length > 0 ? seasonStarts[seasonStarts.length - 1].start_time : null;
 
   const totalRow = await env.DB.prepare(
     `
@@ -260,8 +257,8 @@ export async function handleTrendWinConditions(env, url, path) {
     LIMIT ?;
     `
   ).bind(seasons).all();
-  const seasonStartTimes = (seasonRows.results || []).map((row) => row.start_time).filter(Boolean).sort();
-  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+  const seasonStarts = seasonRows.results || [];
+  const since = seasonStarts.length > 0 ? seasonStarts[seasonStarts.length - 1].start_time : null;
 
   const totals = await env.DB.prepare(
     `

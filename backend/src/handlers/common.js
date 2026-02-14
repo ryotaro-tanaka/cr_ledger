@@ -71,11 +71,8 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
 
 export async function handleCommonPlayers(env, url) {
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
-  const seasonStartTimes = (await findRecentSeasonStartTimes(env, seasons))
-    .map((row) => row.start_time)
-    .filter(Boolean)
-    .sort();
-  const since = seasonStartTimes.length > 0 ? seasonStartTimes[0] : null;
+  const seasonRows = await findRecentSeasonStartTimes(env, seasons);
+  const since = seasonRows.length > 0 ? seasonRows[seasonRows.length - 1].start_time : null;
 
   const { players } = await listPlayers(env);
 
