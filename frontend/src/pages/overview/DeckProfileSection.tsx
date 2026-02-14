@@ -3,11 +3,12 @@ import SectionCard from "../../components/SectionCard";
 type Props = {
   loading: boolean;
   deckIdentityLines: string[];
+  tacticalNotes: string[];
   strengths: string[];
   weaknesses: string[];
 };
 
-export default function DeckProfileSection({ loading, deckIdentityLines, strengths, weaknesses }: Props) {
+export default function DeckProfileSection({ loading, deckIdentityLines, tacticalNotes, strengths, weaknesses }: Props) {
   return (
     <SectionCard>
       <div className="text-sm font-semibold text-slate-900">Deck profile</div>
@@ -21,6 +22,15 @@ export default function DeckProfileSection({ loading, deckIdentityLines, strengt
             {deckIdentityLines.map((line) => (
               <div key={line}>- {line}</div>
             ))}
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-slate-700">Type-based tactical notes</div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-800">
+              {tacticalNotes.map((note) => (
+                <li key={note}>• {note}</li>
+              ))}
+            </ul>
           </div>
 
           <div>
@@ -44,9 +54,9 @@ export default function DeckProfileSection({ loading, deckIdentityLines, strengt
           <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
             <summary className="cursor-pointer text-xs font-semibold text-slate-600">How this profile is judged</summary>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
-              <li>Deck style is inferred using `docs/deck_type.md` (Cycle/Bait/Beatdown/Control/Siege/Bridge Spam).</li>
-              <li>Resistance uses simple counts of AoE / anti-air traits and classes.</li>
-              <li>Cycle speed uses minimum elixir cycle (cheapest 4 cards from slots 0-7).</li>
+              <li>Deck type is scored by multiple signals (avg elixir / traits / win-condition profile), not fixed priority order.</li>
+              <li>When top scores are close, style is shown as Mixed with top 2 candidates.</li>
+              <li>Resistance is heuristic (Air/Swarm/Giant/Building) and for quick reading only.</li>
               <li>Strengths/weaknesses are threshold-based hints, not guaranteed outcomes.</li>
             </ul>
           </details>
