@@ -30,6 +30,11 @@ type CardThumb = {
   slot_kind: "normal" | "evolution" | "hero" | "support";
 };
 
+function normalizeSlotKind(v: unknown): CardThumb["slot_kind"] {
+  if (v === "normal" || v === "evolution" || v === "hero" || v === "support") return v;
+  return "normal";
+}
+
 type Issue = {
   side: IssueSide;
   label: string;
@@ -156,12 +161,10 @@ function OffenseCompareBars({ items, master }: { items: OffenseBarItem[]; master
             </div>
           </div>
           <div className="mt-1 text-[11px] text-slate-500">Win-rate delta {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
-          {i.traitCards.length ? (
-            <details className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
-              <summary className="cursor-pointer text-[11px] font-semibold text-slate-600">Trait cards</summary>
-              <CardThumbGrid cards={i.traitCards} master={master} />
-            </details>
-          ) : null}
+          <details className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <summary className="cursor-pointer text-[11px] font-semibold text-slate-600">Trait cards</summary>
+            <CardThumbGrid cards={i.traitCards} master={master} />
+          </details>
         </div>
       ))}
     </div>
@@ -252,7 +255,8 @@ export default function ImprovePage() {
     for (const row of traits) {
       const cards = Array.isArray(row.cards) ? row.cards : [];
       const normalized = cards
-        .filter((c): c is CardThumb => Number.isFinite(c?.card_id) && typeof c?.slot_kind === "string")
+        .map((c) => ({ card_id: Number(c?.card_id), slot_kind: normalizeSlotKind(c?.slot_kind) }))
+        .filter((c) => Number.isFinite(c.card_id))
         .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
 
       byTrait.set(row.trait_key, normalized);
@@ -462,10 +466,10 @@ export default function ImprovePage() {
               Decision: Prioritize {priorityIssue?.side === "defense" ? "Defense" : "Attack"} first
               {priorityIssue ? ` (encounter ${pct(priorityIssue.encounterRate)} / battles ${priorityIssue.battles})` : ""}
             </div>
-            {priorityIssue?.exampleCards.length ? (
+            {priorityIssue ? (
               <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
                 <summary className="cursor-pointer text-xs font-semibold text-slate-600">Example cards</summary>
-                <CardThumbGrid cards={priorityIssue.exampleCards} master={master} />
+                <CardThumbGrid cards={priorityIssue.exampleCards ?? []} master={master} />
               </details>
             ) : null}
             <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
