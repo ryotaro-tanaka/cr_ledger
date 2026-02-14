@@ -1,5 +1,6 @@
 import { clampInt, json } from "../http.js";
 import { normalizeTagForDb } from "../domain.js";
+import { findSeasonLowerBound } from "../db/decks.js";
 
 const BASE_TRAIT_KEYS = [
   "is_air",
@@ -68,17 +69,7 @@ export async function handleTrendTraits(env, url, path) {
   const playerTagDb = parsePlayerTagFromTrendPath(path, "/traits");
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
 
-  const seasonRows = await env.DB.prepare(
-    `
-    SELECT start_time
-    FROM seasons
-    ORDER BY start_time DESC
-    LIMIT ?;
-    `
-  ).bind(seasons).all();
-
-  const seasonStarts = seasonRows.results || [];
-  const since = seasonStarts.length > 0 ? seasonStarts[seasonStarts.length - 1].start_time : null;
+  const since = await findSeasonLowerBound(env, seasons);
 
   const totalRow = await env.DB.prepare(
     `
@@ -249,16 +240,7 @@ export async function handleTrendTraits(env, url, path) {
 export async function handleTrendWinConditions(env, url, path) {
   const playerTagDb = parsePlayerTagFromTrendPath(path, "/win-conditions");
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
-  const seasonRows = await env.DB.prepare(
-    `
-    SELECT start_time
-    FROM seasons
-    ORDER BY start_time DESC
-    LIMIT ?;
-    `
-  ).bind(seasons).all();
-  const seasonStarts = seasonRows.results || [];
-  const since = seasonStarts.length > 0 ? seasonStarts[seasonStarts.length - 1].start_time : null;
+  const since = await findSeasonLowerBound(env, seasons);
 
   const totals = await env.DB.prepare(
     `

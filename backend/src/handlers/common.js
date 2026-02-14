@@ -3,7 +3,7 @@ import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
 import { crCards } from "../cr_api.js";
 import { statsMyDecksSeasons } from "../db/analytics/legacy.js";
-import { findRecentSeasonStartTimes } from "../db/decks.js";
+import { findSeasonLowerBound } from "../db/decks.js";
 import {
   listPlayers,
   updateDeckName,
@@ -71,8 +71,7 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
 
 export async function handleCommonPlayers(env, url) {
   const seasons = clampInt(url.searchParams.get("seasons"), 1, 6, 2);
-  const seasonRows = await findRecentSeasonStartTimes(env, seasons);
-  const since = seasonRows.length > 0 ? seasonRows[seasonRows.length - 1].start_time : null;
+  const since = await findSeasonLowerBound(env, seasons);
 
   const { players } = await listPlayers(env);
 
