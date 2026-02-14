@@ -249,7 +249,20 @@ export default function ImprovePage() {
     if (!commonTraits) return new Map<string, CardThumb[]>();
     const byTrait = new Map<string, CardThumb[]>();
     for (const row of commonTraits.traits) {
-      byTrait.set(row.trait_key, row.cards.slice(0, 8));
+      const cardsFromNewShape = Array.isArray(row.cards)
+        ? row.cards.filter((c): c is CardThumb => Number.isFinite(c?.card_id) && typeof c?.slot_kind === "string")
+        : [];
+      const cardsFromLegacyShape = Array.isArray(row.card_ids)
+        ? row.card_ids
+            .filter((id) => Number.isFinite(id))
+            .map((card_id) => ({ card_id, slot_kind: "normal" as const }))
+        : [];
+
+      const normalized = (cardsFromNewShape.length ? cardsFromNewShape : cardsFromLegacyShape)
+        .slice(0, 8)
+        .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
+
+      byTrait.set(row.trait_key, normalized);
     }
     return byTrait;
   }, [commonTraits]);
