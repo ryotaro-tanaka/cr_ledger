@@ -270,6 +270,8 @@ export async function statsPriorityLast(env, playerTagDb, myDeckKey, last) {
 /** ---------- stats: my decks list (filtered by player_tag) ---------- */
 
 export async function statsMyDecksSeasons(env, playerTagDb, since) {
+  const sinceNormalized = since ? String(since).replaceAll('-', '').replaceAll(':', '') : null;
+
   const total = await oneNumber(
     env,
     `
@@ -277,9 +279,12 @@ export async function statsMyDecksSeasons(env, playerTagDb, since) {
     FROM battles
     WHERE player_tag = ?
       AND result IN ('win','loss')
-      AND (? IS NULL OR battle_time >= ?);
+      AND (
+        ? IS NULL
+        OR REPLACE(REPLACE(battle_time, '-', ''), ':', '') >= ?
+      );
     `,
-    [playerTagDb, since, since]
+    [playerTagDb, sinceNormalized, sinceNormalized]
   );
 
   if (total === 0) return { total_battles: 0, decks: [] };
@@ -294,11 +299,14 @@ export async function statsMyDecksSeasons(env, playerTagDb, since) {
     LEFT JOIN my_decks d ON d.my_deck_key = b.my_deck_key
     WHERE b.player_tag = ?
       AND b.result IN ('win','loss')
-      AND (? IS NULL OR b.battle_time >= ?)
+      AND (
+        ? IS NULL
+        OR REPLACE(REPLACE(b.battle_time, '-', ''), ':', '') >= ?
+      )
     GROUP BY b.my_deck_key, d.deck_name
     ORDER BY battles DESC;
     `
-  ).bind(playerTagDb, since, since).all();
+  ).bind(playerTagDb, sinceNormalized, sinceNormalized).all();
 
   return { total_battles: total, decks: r.results || [] };
 }

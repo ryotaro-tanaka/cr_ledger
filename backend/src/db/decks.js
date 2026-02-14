@@ -280,17 +280,26 @@ export async function findDefenseThreats(env, myDeckKey, since) {
 
 
 export async function findSeasonLowerBound(env, seasons) {
+  const normalizeSeasonTime = (value) => {
+    if (value === null || value === undefined) return null;
+    return String(value).replaceAll('-', '').replaceAll(':', '');
+  };
+
   const r = await env.DB.prepare(
     `
-    SELECT MIN(start_time) AS start_time
-    FROM (
-      SELECT start_time
-      FROM seasons
-      ORDER BY start_time DESC
-      LIMIT ?
-    ) AS recent_seasons;
+    SELECT start_time
+    FROM seasons;
     `
-  ).bind(seasons).all();
+  ).all();
 
-  return r.results?.[0]?.start_time ?? null;
+  const normalized = (r.results || [])
+    .map((row) => normalizeSeasonTime(row.start_time))
+    .filter((value) => value);
+
+  if (normalized.length === 0) return null;
+
+  const recent = normalized.sort((a, b) => b.localeCompare(a)).slice(0, seasons);
+  if (recent.length === 0) return null;
+
+  return recent.reduce((min, current) => (current < min ? current : min), recent[0]);
 }
