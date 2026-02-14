@@ -203,6 +203,33 @@ Response schema (200):
 Notes:
 - 現行のカードマスタ取得エンドポイント。
 
+## GET /api/common/classes
+
+カード class ごとのカードID一覧を返します。
+
+Request:
+- Auth: Required
+- Path Params: なし
+- Query Params: なし
+- JSON Body: なし
+
+Responses:
+- 401: 認証エラー
+- 500: サーバ内部エラー
+
+Response example (200):
+- `docs/api/examples.md` の「GET /api/common/classes」を参照。
+
+Response schema (200):
+- `ok`: boolean
+- `classes[]`:
+  - `class_key`: string
+  - `card_ids`: number[]
+
+Notes:
+- `classes` は class ごとにグルーピングされた配列。
+- 各要素の `card_ids` は当該 class に属するカードIDの一覧。
+
 ## GET /api/trend/{player_tag}/win-conditions
 
 相手デッキの win_condition 分布を fractional ポイントで集計します。
