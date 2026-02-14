@@ -299,6 +299,9 @@ export default function Overview() {
 
     const primaryType = mixed ? null : topType;
     const styleLabel = mixed ? `Mixed (${DECK_TYPE_LABEL[topType]} / ${DECK_TYPE_LABEL[secondType]})` : DECK_TYPE_LABEL[topType];
+    const typeSummaryLine = mixed
+      ? `This deck is a mixed type (${DECK_TYPE_LABEL[topType]} / ${DECK_TYPE_LABEL[secondType]}).`
+      : `This deck type is ${DECK_TYPE_LABEL[topType]}.`;
     const topReasons = reasons[topType].slice(0, 3);
 
     const normalizedScores = sorted
@@ -307,6 +310,7 @@ export default function Overview() {
 
     return {
       styleLabel,
+      typeSummaryLine,
       normalizedScores,
       topReasons,
       tacticalGuide: primaryType ? TACTICAL_GUIDE[primaryType] : [
@@ -341,8 +345,8 @@ export default function Overview() {
     const avgCost = averageElixirCost != null ? averageElixirCost.toFixed(2) : "-";
 
     return [
+      deckTypeAnalysis?.typeSummaryLine ?? "Deck type is unknown.",
       `Deck style: ${deckTypeAnalysis?.styleLabel ?? "Unknown"}`,
-      `Type score: ${deckTypeAnalysis?.normalizedScores ?? "-"}`,
       `Average elixir: ${avgCost}`,
       `Air resistance: ${airRes}`,
       `Swarm resistance: ${swarmRes}`,
@@ -410,7 +414,14 @@ export default function Overview() {
       {err ? <ApiErrorPanel title="Summary error" detail={err} /> : null}
 
       {!err ? (
-        <DeckProfileSection loading={loading || cardsLoading} deckIdentityLines={deckIdentityLines} tacticalNotes={tacticalNotes} strengths={strengths} weaknesses={weaknesses} />
+        <DeckProfileSection
+          loading={loading || cardsLoading}
+          deckIdentityLines={deckIdentityLines}
+          tacticalNotes={tacticalNotes}
+          typeScoreNote={deckTypeAnalysis ? `Type score (reference): ${deckTypeAnalysis.normalizedScores}` : null}
+          strengths={strengths}
+          weaknesses={weaknesses}
+        />
       ) : null}
 
       {!loading && !err && data ? (

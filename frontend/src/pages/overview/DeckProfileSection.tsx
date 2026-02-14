@@ -4,11 +4,12 @@ type Props = {
   loading: boolean;
   deckIdentityLines: string[];
   tacticalNotes: string[];
+  typeScoreNote: string | null;
   strengths: string[];
   weaknesses: string[];
 };
 
-export default function DeckProfileSection({ loading, deckIdentityLines, tacticalNotes, strengths, weaknesses }: Props) {
+export default function DeckProfileSection({ loading, deckIdentityLines, tacticalNotes, typeScoreNote, strengths, weaknesses }: Props) {
   return (
     <SectionCard>
       <div className="text-sm font-semibold text-slate-900">Deck profile</div>
@@ -56,6 +57,7 @@ export default function DeckProfileSection({ loading, deckIdentityLines, tactica
             <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
               <li>Deck type is scored by multiple signals (avg elixir / traits / win-condition profile), not fixed priority order.</li>
               <li>When top scores are close, style is shown as Mixed with top 2 candidates.</li>
+              {typeScoreNote ? <li>{typeScoreNote}</li> : null}
               <li>Resistance is heuristic (Air/Swarm/Giant/Building) and for quick reading only.</li>
               <li>Strengths/weaknesses are threshold-based hints, not guaranteed outcomes.</li>
             </ul>
