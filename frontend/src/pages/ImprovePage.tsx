@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import SectionCard from "../components/SectionCard";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import { useSelection } from "../lib/selection";
@@ -34,17 +34,6 @@ function normalizeSlotKind(v: unknown): CardThumb["slot_kind"] {
   if (v === "normal" || v === "evolution" || v === "hero" || v === "support") return v;
   return "normal";
 }
-
-function normalizeTraitKey(v: string): string {
-  return v.replace(/^is_/, "").toLowerCase();
-}
-
-const SLOT_KIND_PRIORITY: Record<CardThumb["slot_kind"], number> = {
-  evolution: 4,
-  hero: 3,
-  support: 2,
-  normal: 1,
-};
 
 type Issue = {
   side: IssueSide;
@@ -103,19 +92,6 @@ function expectedLoss(battles: number, baseline: number, given: number): number 
 function traitCount(summary: DeckSummaryResponse | null, keyIncludes: string): number {
   if (!summary) return 0;
   return summary.deck_traits.filter((t) => t.trait_key.includes(keyIncludes)).reduce((sum, t) => sum + t.count, 0);
-}
-
-function dedupeTraitCards(cards: CardThumb[]): CardThumb[] {
-  const byCard = new Map<number, CardThumb>();
-
-  for (const card of cards) {
-    const prev = byCard.get(card.card_id);
-    if (!prev || SLOT_KIND_PRIORITY[card.slot_kind] > SLOT_KIND_PRIORITY[prev.slot_kind]) {
-      byCard.set(card.card_id, card);
-    }
-  }
-
-  return [...byCard.values()].sort((a, b) => a.card_id - b.card_id);
 }
 
 function CardThumbGrid({ cards, master }: { cards: CardThumb[]; master: ReturnType<typeof useCardMaster>["master"] }) {
@@ -259,13 +235,17 @@ export default function ImprovePage() {
         .filter((c) => Number.isFinite(c.card_id))
         .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
 
-      const normalizedTrait = normalizeTraitKey(row.trait_key);
-      const merged = [...(byTrait.get(normalizedTrait) ?? []), ...normalizedCards];
-
-      byTrait.set(normalizedTrait, dedupeTraitCards(merged));
+      byTrait.set(row.trait_key, normalizedCards);
     }
     return byTrait;
   }, [commonTraits]);
+
+  const traitCardsForKey = useCallback((traitKey: string): CardThumb[] => {
+    const exact = traitCardMap.get(traitKey);
+    if (exact) return exact;
+    const altKey = traitKey.startsWith("is_") ? traitKey.slice(3) : `is_${traitKey}`;
+    return traitCardMap.get(altKey) ?? [];
+  }, [traitCardMap]);
 
   const attackIssue = useMemo<Issue | null>(() => {
     if (!offense || !trend) return null;
@@ -295,9 +275,9 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: traitCardMap.get(normalizeTraitKey(hit.trait.trait_key)) ?? [],
+      exampleCards: traitCardsForKey(hit.trait.trait_key),
     };
-  }, [offense, trend, traitCardMap]);
+  }, [offense, trend, traitCardsForKey]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
@@ -344,13 +324,13 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
-          traitCards: traitCardMap.get(normalizeTraitKey(t.trait_key)) ?? [],
+          traitCards: traitCardsForKey(t.trait_key),
         };
       })
       .filter((x) => x.expectedLoss > 0)
       .sort((a, b) => b.expectedLoss - a.expectedLoss)
       .slice(0, 4);
-  }, [offense, trend, summary, traitCardMap]);
+  }, [offense, trend, summary, traitCardsForKey]);
 
   const defenseBars = useMemo(() => {
     if (!defense) return [];
