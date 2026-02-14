@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import SectionCard from "../components/SectionCard";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import { useSelection } from "../lib/selection";
@@ -94,40 +94,22 @@ function traitCount(summary: DeckSummaryResponse | null, keyIncludes: string): n
   return summary.deck_traits.filter((t) => t.trait_key.includes(keyIncludes)).reduce((sum, t) => sum + t.count, 0);
 }
 
-function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): CardThumb[] {
-  if (!offense) return [];
-
-  const key = traitKey.toLowerCase();
-  const cardName = (id: number) => (master?.getName(id) ?? `#${id}`).toLowerCase();
-
-  const matched = offense.counters.cards
-    .filter((c) => {
-      const n = cardName(c.card_id);
-      if (key.includes("stun") || key.includes("immobilize")) {
-        return n.includes("zap") || n.includes("electro") || n.includes("ice") || n.includes("spirit");
-      }
-      if (key.includes("swarm") || key.includes("bait") || key.includes("air")) {
-        return n.includes("arrow") || n.includes("fireball") || n.includes("log") || n.includes("wizard") || n.includes("dragon");
-      }
-      return true;
-    })
-    .sort((a, b) => b.stats.encounter_rate - a.stats.encounter_rate)
-    .slice(0, 2)
-    .map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
-
-  return matched;
-}
-
 function CardThumbGrid({ cards, master }: { cards: CardThumb[]; master: ReturnType<typeof useCardMaster>["master"] }) {
   if (!cards.length) return <div className="text-xs text-slate-500">No cards.</div>;
 
   return (
     <div className="mt-2 flex flex-wrap gap-2">
       {cards.map((c) => {
-        const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+        const icon =
+          master?.getIconUrl(c.card_id, c.slot_kind) ??
+          master?.getIconUrl(c.card_id, "normal") ??
+          master?.getIconUrl(c.card_id, "evolution") ??
+          master?.getIconUrl(c.card_id, "hero") ??
+          master?.getIconUrl(c.card_id, "support") ??
+          null;
         const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
         return (
-          <div key={`${c.card_id}:${c.slot_kind}`} className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-white" title={`${name} (${c.slot_kind})`}>
+          <div key={`${c.card_id}:${c.slot_kind}`} className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-white" title={`${name} (${c.slot_kind}) / ${c.card_id}`}>
             {icon ? <img src={icon} alt={name} className="h-full w-full object-contain" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>}
           </div>
         );
@@ -254,15 +236,22 @@ export default function ImprovePage() {
     const traits = Array.isArray(commonTraits.traits) ? commonTraits.traits : [];
     for (const row of traits) {
       const cards = Array.isArray(row.cards) ? row.cards : [];
-      const normalized = cards
+      const normalizedCards = cards
         .map((c) => ({ card_id: Number(c?.card_id), slot_kind: normalizeSlotKind(c?.slot_kind) }))
         .filter((c) => Number.isFinite(c.card_id))
         .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
 
-      byTrait.set(row.trait_key, normalized);
+      byTrait.set(row.trait_key, normalizedCards);
     }
     return byTrait;
   }, [commonTraits]);
+
+  const traitCardsForKey = useCallback((traitKey: string): CardThumb[] => {
+    const exact = traitCardMap.get(traitKey);
+    if (exact) return exact;
+    const altKey = traitKey.startsWith("is_") ? traitKey.slice(3) : `is_${traitKey}`;
+    return traitCardMap.get(altKey) ?? [];
+  }, [traitCardMap]);
 
   const attackIssue = useMemo<Issue | null>(() => {
     if (!offense || !trend) return null;
@@ -292,9 +281,9 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: traitCardMap.get(hit.trait.trait_key) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
+      exampleCards: traitCardsForKey(hit.trait.trait_key),
     };
-  }, [offense, trend, master, traitCardMap]);
+  }, [offense, trend, traitCardsForKey]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
@@ -341,13 +330,13 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
-          traitCards: traitCardMap.get(t.trait_key) ?? [],
+          traitCards: traitCardsForKey(t.trait_key),
         };
       })
       .filter((x) => x.expectedLoss > 0)
       .sort((a, b) => b.expectedLoss - a.expectedLoss)
       .slice(0, 4);
-  }, [offense, trend, summary, traitCardMap]);
+  }, [offense, trend, summary, traitCardsForKey]);
 
   const defenseBars = useMemo(() => {
     if (!defense) return [];
