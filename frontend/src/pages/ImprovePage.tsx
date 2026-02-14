@@ -223,8 +223,12 @@ export default function ImprovePage() {
     if (!commonTraits) return new Map<string, string[]>();
     const byTrait = new Map<string, string[]>();
     for (const row of commonTraits.traits) {
-      const names = row.card_ids
-        .map((id) => master?.getName(id) ?? `#${id}`)
+      const names = row.cards
+        .map((card) => {
+          const name = master?.getName(card.card_id) ?? `#${card.card_id}`;
+          if (card.slot_kind === "normal") return name;
+          return `${name} (${card.slot_kind})`;
+        })
         .slice(0, 6);
       byTrait.set(row.trait_key, names);
     }

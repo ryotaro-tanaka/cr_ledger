@@ -251,10 +251,13 @@ Response schema (200):
 - `ok`: boolean
 - `traits[]`:
   - `trait_key`: string
-  - `card_ids`: number[]
+  - `cards[]`:
+    - `card_id`: number
+    - `slot_kind`: `normal | evolution | hero | support`
 
 Notes:
 - trait 解決は `docs/db/notes.md` の「Traits Resolve（API参照）」に従う。
+- 同一 `card_id` でも `slot_kind` によって trait が異なる可能性があるため、`cards[]` は `(card_id, slot_kind)` の組で返す。
 - 主な参照テーブルは `card_traits` / `card_trait_kv` / `trait_keys`。
 
 ## GET /api/trend/{player_tag}/win-conditions
