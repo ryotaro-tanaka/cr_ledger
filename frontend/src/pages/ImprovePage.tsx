@@ -35,6 +35,17 @@ function normalizeSlotKind(v: unknown): CardThumb["slot_kind"] {
   return "normal";
 }
 
+function normalizeTraitKey(v: string): string {
+  return v.replace(/^is_/, "").toLowerCase();
+}
+
+const SLOT_KIND_PRIORITY: Record<CardThumb["slot_kind"], number> = {
+  evolution: 4,
+  hero: 3,
+  support: 2,
+  normal: 1,
+};
+
 type Issue = {
   side: IssueSide;
   label: string;
@@ -94,28 +105,17 @@ function traitCount(summary: DeckSummaryResponse | null, keyIncludes: string): n
   return summary.deck_traits.filter((t) => t.trait_key.includes(keyIncludes)).reduce((sum, t) => sum + t.count, 0);
 }
 
-function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): CardThumb[] {
-  if (!offense) return [];
+function dedupeTraitCards(cards: CardThumb[]): CardThumb[] {
+  const byCard = new Map<number, CardThumb>();
 
-  const key = traitKey.toLowerCase();
-  const cardName = (id: number) => (master?.getName(id) ?? `#${id}`).toLowerCase();
+  for (const card of cards) {
+    const prev = byCard.get(card.card_id);
+    if (!prev || SLOT_KIND_PRIORITY[card.slot_kind] > SLOT_KIND_PRIORITY[prev.slot_kind]) {
+      byCard.set(card.card_id, card);
+    }
+  }
 
-  const matched = offense.counters.cards
-    .filter((c) => {
-      const n = cardName(c.card_id);
-      if (key.includes("stun") || key.includes("immobilize")) {
-        return n.includes("zap") || n.includes("electro") || n.includes("ice") || n.includes("spirit");
-      }
-      if (key.includes("swarm") || key.includes("bait") || key.includes("air")) {
-        return n.includes("arrow") || n.includes("fireball") || n.includes("log") || n.includes("wizard") || n.includes("dragon");
-      }
-      return true;
-    })
-    .sort((a, b) => b.stats.encounter_rate - a.stats.encounter_rate)
-    .slice(0, 2)
-    .map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
-
-  return matched;
+  return [...byCard.values()].sort((a, b) => a.card_id - b.card_id);
 }
 
 function CardThumbGrid({ cards, master }: { cards: CardThumb[]; master: ReturnType<typeof useCardMaster>["master"] }) {
@@ -254,12 +254,15 @@ export default function ImprovePage() {
     const traits = Array.isArray(commonTraits.traits) ? commonTraits.traits : [];
     for (const row of traits) {
       const cards = Array.isArray(row.cards) ? row.cards : [];
-      const normalized = cards
+      const normalizedCards = cards
         .map((c) => ({ card_id: Number(c?.card_id), slot_kind: normalizeSlotKind(c?.slot_kind) }))
         .filter((c) => Number.isFinite(c.card_id))
         .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
 
-      byTrait.set(row.trait_key, normalized);
+      const normalizedTrait = normalizeTraitKey(row.trait_key);
+      const merged = [...(byTrait.get(normalizedTrait) ?? []), ...normalizedCards];
+
+      byTrait.set(normalizedTrait, dedupeTraitCards(merged));
     }
     return byTrait;
   }, [commonTraits]);
@@ -292,9 +295,9 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: traitCardMap.get(hit.trait.trait_key) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
+      exampleCards: traitCardMap.get(normalizeTraitKey(hit.trait.trait_key)) ?? [],
     };
-  }, [offense, trend, master, traitCardMap]);
+  }, [offense, trend, traitCardMap]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
@@ -341,7 +344,7 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
-          traitCards: traitCardMap.get(t.trait_key) ?? [],
+          traitCards: traitCardMap.get(normalizeTraitKey(t.trait_key)) ?? [],
         };
       })
       .filter((x) => x.expectedLoss > 0)
