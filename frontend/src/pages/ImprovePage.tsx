@@ -19,8 +19,8 @@ import type {
   TrendWinConditionsResponse,
 } from "../api/types";
 
-type IssueSide = "attack" | "defense";
 type WhyTab = "attack" | "defense";
+type IssueSide = "attack" | "defense";
 
 type Issue = {
   side: IssueSide;
@@ -29,6 +29,7 @@ type Issue = {
   deltaVsBaseline: number;
   battles: number;
   expectedLoss: number;
+  exampleCards: string[];
 };
 
 type ActionPlan = {
@@ -36,7 +37,25 @@ type ActionPlan = {
   title: string;
   reason: string;
   currentState: string;
+  checks: string[];
   priority: number;
+};
+
+type OffenseBarItem = {
+  key: string;
+  label: string;
+  envAvgCount: number;
+  myDeckCount: number;
+  expectedLoss: number;
+  deltaVsBaseline: number;
+};
+
+const ISSUE_FILTER = {
+  minEncounterRate: 0.15,
+  maxEncounterRate: 0.85,
+  minDelta: -0.05,
+  minBattles: 20,
+  maxMeanCount: 2.2,
 };
 
 function prettyKey(k: string): string {
@@ -47,59 +66,82 @@ function pct(v: number): string {
   return `${Math.round(v * 1000) / 10}%`;
 }
 
+function signedPct(v: number): string {
+  const raw = Math.round(v * 1000) / 10;
+  return `${raw > 0 ? "+" : ""}${raw}%`;
+}
+
 function expectedLoss(battles: number, baseline: number, given: number): number {
   return battles * Math.max(0, baseline - given);
 }
 
 function traitCount(summary: DeckSummaryResponse | null, keyIncludes: string): number {
   if (!summary) return 0;
-  return summary.deck_traits
-    .filter((t) => t.trait_key.includes(keyIncludes))
-    .reduce((sum, t) => sum + t.count, 0);
+  return summary.deck_traits.filter((t) => t.trait_key.includes(keyIncludes)).reduce((sum, t) => sum + t.count, 0);
 }
 
-function categoryForThreat(cardName: string): string {
-  const x = cardName.toLowerCase();
-  if (x.includes("giant") || x.includes("hog") || x.includes("ram") || x.includes("golem") || x.includes("balloon")) {
-    return "建物への圧に強い受け";
-  }
-  return "受け先と回し方";
+function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): string[] {
+  if (!offense) return [];
+
+  const key = traitKey.toLowerCase();
+  const cardName = (id: number) => (master?.getName(id) ?? `#${id}`).toLowerCase();
+
+  const matched = offense.counters.cards
+    .filter((c) => {
+      const n = cardName(c.card_id);
+      if (key.includes("stun") || key.includes("immobilize")) {
+        return n.includes("zap") || n.includes("electro") || n.includes("ice") || n.includes("spirit");
+      }
+      if (key.includes("swarm") || key.includes("bait") || key.includes("air")) {
+        return n.includes("arrow") || n.includes("fireball") || n.includes("log") || n.includes("wizard") || n.includes("dragon");
+      }
+      return true;
+    })
+    .sort((a, b) => b.stats.encounter_rate - a.stats.encounter_rate)
+    .slice(0, 2)
+    .map((c) => master?.getName(c.card_id) ?? `#${c.card_id}`);
+
+  return matched;
 }
 
-function ScatterPlot({
-  points,
-}: {
-  points: Array<{ key: string; label: string; x: number; y: number; size: number }>;
-}) {
-  if (!points.length) return <div className="text-xs text-slate-500">十分なデータがありません。</div>;
-
-  const w = 300;
-  const h = 170;
-  const maxX = Math.max(...points.map((p) => p.x), 0.001);
-  const maxY = Math.max(...points.map((p) => p.y), 0.001);
-  const maxS = Math.max(...points.map((p) => p.size), 1);
+function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
+  if (!items.length) return <div className="text-xs text-slate-500">十分なデータがありません。</div>;
+  const maxEnv = Math.max(...items.map((i) => i.envAvgCount), 0.001);
+  const maxMy = Math.max(...items.map((i) => i.myDeckCount), 0.001);
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="mt-2 w-full rounded-xl border border-slate-200 bg-white">
-      <line x1={30} y1={h - 24} x2={w - 8} y2={h - 24} stroke="#cbd5e1" strokeWidth="1" />
-      <line x1={30} y1={8} x2={30} y2={h - 24} stroke="#cbd5e1" strokeWidth="1" />
-      {points.map((p) => {
-        const cx = 30 + (p.x / maxX) * (w - 46);
-        const cy = h - 24 - (p.y / maxY) * (h - 36);
-        const r = 4 + (p.size / maxS) * 6;
-        return <circle key={p.key} cx={cx} cy={cy} r={r} fill="#2563eb" fillOpacity="0.65" />;
-      })}
-    </svg>
+    <div className="mt-2 space-y-3">
+      {items.map((i) => (
+        <div key={i.key} className="rounded-xl border border-slate-200 bg-white p-2">
+          <div className="text-xs font-semibold text-slate-900">{i.label}</div>
+          <div className="mt-1 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+            <div>
+              <div>環境平均 {i.envAvgCount.toFixed(2)}枚</div>
+              <div className="mt-1 h-1.5 rounded bg-slate-100">
+                <div className="h-full rounded bg-indigo-500" style={{ width: `${(i.envAvgCount / maxEnv) * 100}%` }} />
+              </div>
+            </div>
+            <div>
+              <div>あなた {i.myDeckCount}枚</div>
+              <div className="mt-1 h-1.5 rounded bg-slate-100">
+                <div className="h-full rounded bg-emerald-500" style={{ width: `${(i.myDeckCount / Math.max(maxMy, 1)) * 100}%` }} />
+              </div>
+            </div>
+          </div>
+          <div className="mt-1 text-[11px] text-slate-500">勝率差 {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
+        </div>
+      ))}
+    </div>
   );
 }
 
-function ThreatBars({
+function DefenseBars({
   items,
 }: {
-  items: Array<{ key: string; label: string; expectedLoss: number; encounterRate: number }>;
+  items: Array<{ key: string; label: string; expectedLoss: number; encounterRate: number; deltaVsBaseline: number }>;
 }) {
   if (!items.length) return <div className="text-xs text-slate-500">十分なデータがありません。</div>;
-  const maxV = Math.max(...items.map((x) => x.expectedLoss), 0.001);
+  const maxLoss = Math.max(...items.map((x) => x.expectedLoss), 0.001);
 
   return (
     <div className="mt-2 space-y-2">
@@ -107,11 +149,12 @@ function ThreatBars({
         <div key={x.key}>
           <div className="flex items-center justify-between text-xs text-slate-700">
             <span>{x.label}</span>
-            <span>EL {x.expectedLoss.toFixed(1)} / 遭遇 {pct(x.encounterRate)}</span>
+            <span>EL {x.expectedLoss.toFixed(1)} / 勝率差 {signedPct(x.deltaVsBaseline)}</span>
           </div>
           <div className="mt-1 h-2 rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-rose-500" style={{ width: `${(x.expectedLoss / maxV) * 100}%` }} />
+            <div className="h-full rounded-full bg-rose-500" style={{ width: `${(x.expectedLoss / maxLoss) * 100}%` }} />
           </div>
+          <div className="mt-1 text-[11px] text-slate-500">遭遇率 {pct(x.encounterRate)}</div>
         </div>
       ))}
     </div>
@@ -121,8 +164,6 @@ function ThreatBars({
 export default function ImprovePage() {
   const { player, deckKey } = useSelection();
   const { master } = useCardMaster();
-  const seasons = 2;
-
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [offense, setOffense] = useState<DeckOffenseCountersResponse | null>(null);
@@ -143,9 +184,9 @@ export default function ImprovePage() {
       setSelectedActionId(null);
       try {
         const [off, def, tr, sum, wc] = await Promise.all([
-          getDeckOffenseCounters(deckKey, seasons),
-          getDeckDefenseThreats(deckKey, seasons),
-          getTrendTraits(player.player_tag, seasons),
+          getDeckOffenseCounters(deckKey, 2),
+          getDeckDefenseThreats(deckKey, 2),
+          getTrendTraits(player.player_tag, 2),
           getDeckSummary(deckKey),
           getTrendWinConditions(player.player_tag, 200),
         ]);
@@ -168,45 +209,60 @@ export default function ImprovePage() {
   }, [player, deckKey]);
 
   const attackIssue = useMemo<Issue | null>(() => {
-    if (!offense) return null;
+    if (!offense || !trend) return null;
     const baseline = offense.summary.baseline_win_rate;
-    const candidate = offense.counters.traits
-      .filter((t) => t.stats.encounter_rate <= 0.85)
-      .map((t) => ({
-        trait: t,
-        loss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
-      }))
+
+    const hit = offense.counters.traits
+      .map((t) => {
+        const meanCount = trend.traits.find((x) => x.trait_key === t.trait_key)?.summary.mean_count ?? 0;
+        return {
+          trait: t,
+          meanCount,
+          loss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
+        };
+      })
+      .filter((x) => x.trait.stats.encounter_rate >= ISSUE_FILTER.minEncounterRate)
+      .filter((x) => x.trait.stats.encounter_rate <= ISSUE_FILTER.maxEncounterRate)
+      .filter((x) => x.trait.stats.delta_vs_baseline <= ISSUE_FILTER.minDelta)
+      .filter((x) => x.trait.stats.battles_with_element >= ISSUE_FILTER.minBattles)
+      .filter((x) => x.meanCount <= ISSUE_FILTER.maxMeanCount)
       .sort((a, b) => b.loss - a.loss)[0];
 
-    if (!candidate) return null;
+    if (!hit) return null;
     return {
       side: "attack",
-      label: prettyKey(candidate.trait.trait_key),
-      encounterRate: candidate.trait.stats.encounter_rate,
-      deltaVsBaseline: candidate.trait.stats.delta_vs_baseline,
-      battles: candidate.trait.stats.battles_with_element,
-      expectedLoss: candidate.loss,
+      label: prettyKey(hit.trait.trait_key),
+      encounterRate: hit.trait.stats.encounter_rate,
+      deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
+      battles: hit.trait.stats.battles_with_element,
+      expectedLoss: hit.loss,
+      exampleCards: cardExamplesForTrait(hit.trait.trait_key, offense, master),
     };
-  }, [offense]);
+  }, [offense, trend, master]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
     const baseline = defense.summary.baseline_win_rate;
-    const candidate = defense.threats
+
+    const hit = defense.threats
       .map((t) => ({
         threat: t,
         loss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
       }))
+      .filter((x) => x.threat.stats.encounter_rate >= ISSUE_FILTER.minEncounterRate)
+      .filter((x) => x.threat.stats.delta_vs_baseline <= ISSUE_FILTER.minDelta)
+      .filter((x) => x.threat.stats.battles_with_element >= ISSUE_FILTER.minBattles)
       .sort((a, b) => b.loss - a.loss)[0];
 
-    if (!candidate) return null;
+    if (!hit) return null;
     return {
       side: "defense",
-      label: master?.getName(candidate.threat.card_id) ?? `#${candidate.threat.card_id}`,
-      encounterRate: candidate.threat.stats.encounter_rate,
-      deltaVsBaseline: candidate.threat.stats.delta_vs_baseline,
-      battles: candidate.threat.stats.battles_with_element,
-      expectedLoss: candidate.loss,
+      label: master?.getName(hit.threat.card_id) ?? `#${hit.threat.card_id}`,
+      encounterRate: hit.threat.stats.encounter_rate,
+      deltaVsBaseline: hit.threat.stats.delta_vs_baseline,
+      battles: hit.threat.stats.battles_with_element,
+      expectedLoss: hit.loss,
+      exampleCards: [master?.getName(hit.threat.card_id) ?? `#${hit.threat.card_id}`],
     };
   }, [defense, master]);
 
@@ -216,26 +272,25 @@ export default function ImprovePage() {
     return attackIssue.expectedLoss >= defenseIssue.expectedLoss ? attackIssue : defenseIssue;
   }, [attackIssue, defenseIssue]);
 
-  const attackScatterPoints = useMemo(() => {
-    if (!offense || !trend) return [];
+  const offenseCompare = useMemo<OffenseBarItem[]>(() => {
+    if (!offense || !trend || !summary) return [];
     const baseline = offense.summary.baseline_win_rate;
     return offense.counters.traits
-      .filter((t) => t.stats.encounter_rate <= 0.85)
       .map((t) => {
         const tr = trend.traits.find((x) => x.trait_key === t.trait_key);
-        const impact = Math.max(0, baseline - t.stats.win_rate_given);
         return {
           key: t.trait_key,
           label: prettyKey(t.trait_key),
-          x: tr?.summary.mean_count ?? 0,
-          y: impact,
-          size: t.stats.battles_with_element,
+          envAvgCount: tr?.summary.mean_count ?? 0,
+          myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
+          expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
+          deltaVsBaseline: t.stats.delta_vs_baseline,
         };
       })
-      .filter((x) => x.x > 0 || x.y > 0)
-      .sort((a, b) => b.x * b.y - a.x * a.y)
-      .slice(0, 10);
-  }, [offense, trend]);
+      .filter((x) => x.expectedLoss > 0)
+      .sort((a, b) => b.expectedLoss - a.expectedLoss)
+      .slice(0, 4);
+  }, [offense, trend, summary]);
 
   const defenseBars = useMemo(() => {
     if (!defense) return [];
@@ -246,6 +301,7 @@ export default function ImprovePage() {
         label: master?.getName(t.card_id) ?? `#${t.card_id}`,
         expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
         encounterRate: t.stats.encounter_rate,
+        deltaVsBaseline: t.stats.delta_vs_baseline,
       }))
       .sort((a, b) => b.expectedLoss - a.expectedLoss)
       .slice(0, 5);
@@ -254,27 +310,29 @@ export default function ImprovePage() {
   const actions = useMemo<ActionPlan[]>(() => {
     if (!summary) return [];
     const xs: ActionPlan[] = [];
-    const topAttack = attackIssue?.label.toLowerCase() ?? "";
-    const topDefense = defenseIssue?.label ?? "";
+    const attackLabel = attackIssue?.label.toLowerCase() ?? "";
+    const defenseLabel = defenseIssue?.label ?? "";
 
     const stunCount = traitCount(summary, "stun") + traitCount(summary, "immobilize");
-    if ((topAttack.includes("stun") || topAttack.includes("immobilize")) && stunCount <= 1) {
+    if ((attackLabel.includes("stun") || attackLabel.includes("immobilize")) && stunCount <= 1) {
       xs.push({
-        id: "act-stun",
-        title: "行動キャンセル耐性を厚くする",
-        reason: `攻め阻害の上位が ${attackIssue?.label ?? "stun系"}`,
-        currentState: `あなたの現状: stun/immobilize系 trait count = ${stunCount}`,
+        id: "action-stun",
+        title: "行動キャンセル耐性を増やす構成を検討",
+        reason: `攻撃Issueが ${attackIssue?.label ?? "stun系"}（勝率差 ${signedPct(attackIssue?.deltaVsBaseline ?? 0)}）`,
+        currentState: `現状: stun/immobilize trait count = ${stunCount}`,
+        checks: ["次の5戦で攻め失敗の回数", "スタン系対面での勝率"],
         priority: attackIssue?.expectedLoss ?? 0,
       });
     }
 
-    const aoeCount = traitCount(summary, "splash") + traitCount(summary, "area");
-    if ((topAttack.includes("swarm") || topAttack.includes("bait")) && aoeCount <= 1) {
+    const aoeCount = traitCount(summary, "aoe") + traitCount(summary, "splash") + traitCount(summary, "area");
+    if ((attackLabel.includes("swarm") || attackLabel.includes("bait")) && aoeCount <= 1) {
       xs.push({
-        id: "act-aoe",
-        title: "範囲処理カテゴリを厚くする",
-        reason: `攻め阻害の傾向に ${attackIssue?.label ?? "swarm/bait"} が見える`,
-        currentState: `あなたの現状: AoE系 trait count = ${aoeCount}`,
+        id: "action-aoe",
+        title: "範囲処理カテゴリを1枠厚くする構成を検討",
+        reason: `攻撃Issueが ${attackIssue?.label ?? "swarm/bait"} で阻害されている`,
+        currentState: `現状: AoE系 trait count = ${aoeCount}`,
+        checks: ["次の5戦で群れ処理の失敗回数", "呪文温存の成功率"],
         priority: (attackIssue?.expectedLoss ?? 0) * 0.95,
       });
     }
@@ -282,20 +340,22 @@ export default function ImprovePage() {
     const buildingCount = summary.cards.filter((c) => c.card_type === "building").length;
     if (defenseIssue && buildingCount === 0) {
       xs.push({
-        id: "act-defense-accept",
-        title: `${categoryForThreat(topDefense)}を1枠検討する`,
-        reason: `守り脅威の上位が ${topDefense}`,
-        currentState: `あなたの現状: building card count = ${buildingCount}`,
+        id: "action-defense",
+        title: "受け専用枠（建物/高DPS）を1枠増やす構成を検討",
+        reason: `Defense Issueが ${defenseLabel}（勝率差 ${signedPct(defenseIssue.deltaVsBaseline)}）`,
+        currentState: `現状: 建物カード数 = ${buildingCount}`,
+        checks: ["次の5戦で${defenseLabel}対面の勝率", "受け札温存の成功率"],
         priority: defenseIssue.expectedLoss,
       });
     }
 
     if (xs.length === 0) {
       xs.push({
-        id: "act-review",
-        title: "崩れ方のカテゴリを1つ固定して試す",
-        reason: "上位Issueに直結する不足カテゴリが明確でないため",
-        currentState: "あなたの現状: まず3〜5戦の観察で原因候補を固定",
+        id: "action-fallback",
+        title: "上位Issueに対する受け失敗パターンを1つ固定して検証",
+        reason: "不足カテゴリが明確でないため、まず失敗パターンを固定して試す",
+        currentState: "現状: 直近5戦から攻め失敗2件/守り失敗2件を抽出",
+        checks: ["次の5戦で同失敗の再発率", "調整後の勝率差"],
         priority: 0,
       });
     }
@@ -303,7 +363,7 @@ export default function ImprovePage() {
     return xs.sort((a, b) => b.priority - a.priority).slice(0, 3);
   }, [summary, attackIssue, defenseIssue]);
 
-  const selectedAction = useMemo(() => actions.find((x) => x.id === selectedActionId) ?? null, [actions, selectedActionId]);
+  const selectedAction = useMemo(() => actions.find((a) => a.id === selectedActionId) ?? null, [actions, selectedActionId]);
 
   const trendTopWinCons = useMemo(() => {
     if (!winConTrend) return [];
@@ -314,11 +374,17 @@ export default function ImprovePage() {
     }));
   }, [winConTrend, master]);
 
+  const issueLine = priorityIssue
+    ? priorityIssue.side === "attack"
+      ? `攻撃が「${priorityIssue.label}系」で止められやすい（勝率 ${signedPct(priorityIssue.deltaVsBaseline)}）`
+      : `守りが「${priorityIssue.label}」に崩れやすい（勝率 ${signedPct(priorityIssue.deltaVsBaseline)}）`
+    : "優先課題を決めるデータが不足しています";
+
   return (
     <section className="mx-auto max-w-md space-y-4 px-4 pt-4">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">Improve</h1>
-        <div className="mt-1 text-xs text-slate-500">Issue / Why / Action の3段で、次に試す1手を決めます。</div>
+        <div className="mt-1 text-xs text-slate-500">Issue / Why / Action の3段で、次の5戦で試す方針を決めます。</div>
       </div>
 
       {err ? <ApiErrorPanel detail={err} /> : null}
@@ -328,17 +394,15 @@ export default function ImprovePage() {
         <>
           <SectionCard>
             <div className="text-sm font-semibold text-slate-900">Issue（今の最優先課題）</div>
-            <div className="mt-2 text-sm text-slate-700">Attack Issue: {attackIssue ? `攻めが止められやすい：${attackIssue.label}` : "データ不足"}</div>
-            <div className="mt-1 text-sm text-slate-700">Defense Issue: {defenseIssue ? `守りが崩れやすい：${defenseIssue.label}` : "データ不足"}</div>
-            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+            <div className="mt-2 text-sm font-semibold text-slate-900">{issueLine}</div>
+            <div className="mt-1 text-xs text-slate-600">Attack Issue: {attackIssue ? `${attackIssue.label} / EL ${attackIssue.expectedLoss.toFixed(1)}` : "データ不足"}</div>
+            <div className="mt-1 text-xs text-slate-600">Defense Issue: {defenseIssue ? `${defenseIssue.label} / EL ${defenseIssue.expectedLoss.toFixed(1)}` : "データ不足"}</div>
+            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               結論: 今は {priorityIssue?.side === "defense" ? "Defense" : "Attack"} を先に直す
+              {priorityIssue ? `（遭遇率 ${pct(priorityIssue.encounterRate)} / battles ${priorityIssue.battles}）` : ""}
             </div>
-            {priorityIssue ? (
-              <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-600">
-                <div>遭遇率 {pct(priorityIssue.encounterRate)}</div>
-                <div>勝率差 {pct(priorityIssue.deltaVsBaseline)}</div>
-                <div>battles {priorityIssue.battles}</div>
-              </div>
+            {priorityIssue?.exampleCards.length ? (
+              <div className="mt-2 text-xs text-slate-600">具体カード例: {priorityIssue.exampleCards.join(" / ")}</div>
             ) : null}
           </SectionCard>
 
@@ -350,26 +414,26 @@ export default function ImprovePage() {
                   onClick={() => setWhyTab("attack")}
                   className={`rounded-lg px-2 py-1 ${whyTab === "attack" ? "bg-white text-slate-900" : "text-slate-600"}`}
                 >
-                  環境×攻め阻害
+                  環境平均 vs 自分（攻め）
                 </button>
                 <button
                   onClick={() => setWhyTab("defense")}
                   className={`rounded-lg px-2 py-1 ${whyTab === "defense" ? "bg-white text-slate-900" : "text-slate-600"}`}
                 >
-                  守り脅威
+                  守り脅威（cards）
                 </button>
               </div>
             </div>
 
             {whyTab === "attack" ? (
               <>
-                <div className="mt-2 text-xs text-slate-600">散布図: X=環境強さ(mean_count), Y=悪影響(baseline-win_rate_given), サイズ=battles</div>
-                <ScatterPlot points={attackScatterPoints} />
+                <div className="mt-2 text-xs text-slate-600">上位traitsの「環境平均枚数」と「あなたの枚数」を比較（EL/勝率差付き）</div>
+                <OffenseCompareBars items={offenseCompare} />
               </>
             ) : (
               <>
-                <div className="mt-2 text-xs text-slate-600">棒グラフ: Top threats（expected_loss）</div>
-                <ThreatBars items={defenseBars} />
+                <div className="mt-2 text-xs text-slate-600">Top threatsを expected loss 主軸で表示（勝率差・遭遇率付き）</div>
+                <DefenseBars items={defenseBars} />
               </>
             )}
 
@@ -393,6 +457,7 @@ export default function ImprovePage() {
                   <div className="text-sm font-semibold text-slate-900">{a.title}</div>
                   <div className="mt-1 text-xs text-slate-600">なぜ今か: {a.reason}</div>
                   <div className="mt-1 text-xs text-slate-500">{a.currentState}</div>
+                  <div className="mt-1 text-[11px] text-slate-500">次の5戦で検証: {a.checks.join(" / ")}</div>
                   <button
                     onClick={() => setSelectedActionId(a.id)}
                     className={`mt-2 rounded-xl px-3 py-1.5 text-xs font-medium ${selectedActionId === a.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}

@@ -10,53 +10,69 @@ This document explains how `frontend/src/pages/ImprovePage.tsx` builds Improve U
 - `GET /api/decks/{my_deck_key}/summary`
 - `GET /api/trend/win-conditions?player_tag=...&last=200`
 
-All endpoints are fetched in parallel after player/deck are selected.
+All endpoints are fetched in parallel.
 
-## Information architecture (fixed 3 blocks)
+## Information architecture (fixed)
 
-1. **Issue**: one priority conclusion
-2. **Why**: one chart area (tabbed)
-3. **Action**: 2-3 non-card-specific plans
+1. **Issue**: one final priority
+2. **Why**: one evidence area (tab switch)
+3. **Action**: 2-3 plans with verification axis
 
-## Main flow
+## 1) Issue selection
 
-### 1) Issue selection
+Attack/Defense are ranked separately first, then final priority is chosen.
 
-- Build attack issue from `offense.counters.traits`.
-- Build defense issue from `defense.threats`.
-- Do **not** compare offense trait and defense card directly in one candidate list.
-- Compute unified score for both sides:
+Unified score:
 
 `expected_loss = battles_with_element * max(0, baseline_win_rate - win_rate_given)`
 
-- Exclude always-on traits from issue candidates (`encounter_rate > 0.85`).
-- Pick top attack issue by expected loss.
-- Pick top defense issue by expected loss.
-- Final priority (`Attack` or `Defense`) is whichever has larger expected loss.
+Issue candidate filters:
 
-### 2) Why (evidence)
+- `encounter_rate >= 0.15`
+- `encounter_rate <= 0.85` (exclude always-on traits)
+- `delta_vs_baseline <= -0.05`
+- `battles_with_element >= 20`
+- `trend.mean_count <= 2.2` (for attack traits)
 
-- Tab A: `環境×攻め阻害` scatter for offense traits.
-  - X: trend `mean_count`
-  - Y: `max(0, baseline_win_rate - win_rate_given)`
-  - Dot size: `battles_with_element`
-- Tab B: `守り脅威` bar chart for top defense cards.
-  - Value: expected loss
-  - Sub-info: encounter rate
-- Small background line: trend win-condition top 3.
+UI copy for issue emphasizes interpretation:
 
-### 3) Action generation
+- e.g. `攻撃が「スタン系」で止められやすい（勝率 -6.7%）`
+- show concrete example cards for traits (from top offense counter cards)
 
-- Action plans are generated only when deck summary suggests shortage.
-- Use `summary.deck_traits` / `summary.cards` as shortage checks.
-- Plans are category-level wording (non-causal, non card-fixed), e.g.:
-  - action cancel resistance
-  - AoE category
-  - receiving options against building-focused pressure
-- Show up to 3 plans.
-- CTA `この方針で検討` pins one plan as memo.
+## 2) Why block
+
+Tabbed view:
+
+- Attack tab: horizontal compare bars (top traits)
+  - environment average count (`trend.mean_count`)
+  - your deck count (`summary.deck_traits`)
+  - plus `expected_loss` and `delta_vs_baseline`
+- Defense tab: top threat bars
+  - main value: `expected_loss`
+  - sub info: `delta_vs_baseline`, `encounter_rate`
+
+Small context line:
+
+- trend win-condition top 3 cards.
+
+## 3) Action generation
+
+Plans are category-level and shortage-based (non-causal, non card-fixed).
+
+- stun/immobilize shortage
+- AoE category shortage
+- defense receiving slot shortage (building/high-DPS role)
+- fallback review plan if no shortage is explicit
+
+Each plan includes:
+
+- why now
+- current state
+- **next 5 battles verification metrics**
+
+CTA `この方針で検討` pins one memo.
 
 ## Notes
 
-- This is a decision-support heuristic, not a causal model.
-- Copy intentionally avoids causal certainty.
+- This is decision support, not causal proof.
+- Wording intentionally avoids causal certainty.
