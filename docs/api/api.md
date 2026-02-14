@@ -67,28 +67,6 @@ Response schema (200):
 Notes:
 - 現行 API の継続運用対象。
 
-## GET /api/common/player
-
-単一プレイヤー取得用の分割エンドポイント（将来拡張用）です。
-
-Request:
-- Auth: Required
-- Path Params: なし
-- Query Params: 仕様策定中
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。実装時にこの節を更新する。
-- `/api/common/players` の肥大化対策として必要になる想定。
-
 ## GET /api/common/players
 
 既知プレイヤー一覧と各プレイヤーのデッキ情報を一括取得します。
@@ -259,27 +237,6 @@ Notes:
 - 相手側 win_condition が `k` 枚なら各カードに `1/k` を配分。
 - 0枚なら `no_win_condition_points` に 1 を加算。
 
-## GET /api/trend/pair/win-condition
-
-win_condition の組み合わせ傾向を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params: なし
-- Query Params: 未定
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。実装・スキーマともに未確定。
-
 ## GET /api/trend/{player_tag}/traits
 
 相手デッキにおける trait 枚数分布（Encounter-weighted）を返します。
@@ -318,76 +275,6 @@ Notes:
 - 1バトル=1サンプル。
 - `trait_count` は相手デッキ内で当該traitが true のカード枚数。
 - trait 判定ルールは `docs/db/notes.md` の「Traits Resolve（API参照）」を参照。
-
-## GET /api/decks/{my_deck_key}/matchups/by-traits
-
-デッキの対 trait 勝率を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params:
-  - `my_deck_key`: string
-- Query Params:
-  - `last`: number (optional, default 200, max 5000)
-  - `seasons`: number (optional, default 2)
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。
-- 仕様策定中のため、スキーマは実装時に確定する。
-
-## GET /api/decks/{my_deck_key}/matchups/by-win-condition
-
-デッキの対 win_condition 勝率を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params:
-  - `my_deck_key`: string
-- Query Params: 未定
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 404: ルート未提供（現状未実装）
-- 500: サーバ内部エラー
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。実装・スキーマともに未確定。
-
-## GET /api/decks/{my_deck_key}/traits
-
-デッキの trait 集計を返す予定のエンドポイントです。
-
-Request:
-- Auth: Required
-- Path Params:
-  - `my_deck_key`: string
-- Query Params: 未定
-- JSON Body: なし
-
-Responses:
-- 401: 認証エラー
-- 500: サーバ内部エラー
-- 404: ルート未提供（現状未実装）
-
-Response schema (200):
-- 未提供（仕様策定中）
-
-Notes:
-- 現時点ではルート未提供。
-- 同等情報は現時点では `/api/decks/{my_deck_key}/summary` に含まれる。
 
 ## GET /api/decks/{my_deck_key}/summary
 
