@@ -25,6 +25,11 @@ import type {
 type WhyTab = "attack" | "defense";
 type IssueSide = "attack" | "defense";
 
+type CardThumb = {
+  card_id: number;
+  slot_kind: "normal" | "evolution" | "hero" | "support";
+};
+
 type Issue = {
   side: IssueSide;
   label: string;
@@ -32,7 +37,7 @@ type Issue = {
   deltaVsBaseline: number;
   battles: number;
   expectedLoss: number;
-  exampleCards: string[];
+  exampleCards: CardThumb[];
 };
 
 type ActionPlan = {
@@ -51,7 +56,7 @@ type OffenseBarItem = {
   myDeckCount: number;
   expectedLoss: number;
   deltaVsBaseline: number;
-  traitCards: string[];
+  traitCards: CardThumb[];
 };
 
 const ISSUE_FILTER = {
@@ -84,7 +89,7 @@ function traitCount(summary: DeckSummaryResponse | null, keyIncludes: string): n
   return summary.deck_traits.filter((t) => t.trait_key.includes(keyIncludes)).reduce((sum, t) => sum + t.count, 0);
 }
 
-function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): string[] {
+function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResponse | null, master: ReturnType<typeof useCardMaster>["master"]): CardThumb[] {
   if (!offense) return [];
 
   const key = traitKey.toLowerCase();
@@ -103,12 +108,30 @@ function cardExamplesForTrait(traitKey: string, offense: DeckOffenseCountersResp
     })
     .sort((a, b) => b.stats.encounter_rate - a.stats.encounter_rate)
     .slice(0, 2)
-    .map((c) => master?.getName(c.card_id) ?? `#${c.card_id}`);
+    .map((c) => ({ card_id: c.card_id, slot_kind: c.slot_kind }));
 
   return matched;
 }
 
-function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
+function CardThumbGrid({ cards, master }: { cards: CardThumb[]; master: ReturnType<typeof useCardMaster>["master"] }) {
+  if (!cards.length) return <div className="text-xs text-slate-500">No cards.</div>;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {cards.map((c) => {
+        const icon = master?.getIconUrl(c.card_id, c.slot_kind) ?? null;
+        const name = master?.getName(c.card_id) ?? `#${c.card_id}`;
+        return (
+          <div key={`${c.card_id}:${c.slot_kind}`} className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-white" title={`${name} (${c.slot_kind})`}>
+            {icon ? <img src={icon} alt={name} className="h-full w-full object-contain" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">?</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OffenseCompareBars({ items, master }: { items: OffenseBarItem[]; master: ReturnType<typeof useCardMaster>["master"] }) {
   if (!items.length) return <div className="text-xs text-slate-500">Not enough data to show this yet.</div>;
   const maxEnv = Math.max(...items.map((i) => i.envAvgCount), 0.001);
   const maxMy = Math.max(...items.map((i) => i.myDeckCount), 0.001);
@@ -134,7 +157,10 @@ function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
           </div>
           <div className="mt-1 text-[11px] text-slate-500">Win-rate delta {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
           {i.traitCards.length ? (
-            <div className="mt-1 text-[11px] text-slate-500">Trait cards: {i.traitCards.join(" / ")}</div>
+            <details className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
+              <summary className="cursor-pointer text-[11px] font-semibold text-slate-600">Trait cards</summary>
+              <CardThumbGrid cards={i.traitCards} master={master} />
+            </details>
           ) : null}
         </div>
       ))}
@@ -219,21 +245,14 @@ export default function ImprovePage() {
     };
   }, [player, deckKey]);
 
-  const traitCardNameMap = useMemo(() => {
-    if (!commonTraits) return new Map<string, string[]>();
-    const byTrait = new Map<string, string[]>();
+  const traitCardMap = useMemo(() => {
+    if (!commonTraits) return new Map<string, CardThumb[]>();
+    const byTrait = new Map<string, CardThumb[]>();
     for (const row of commonTraits.traits) {
-      const names = row.cards
-        .map((card) => {
-          const name = master?.getName(card.card_id) ?? `#${card.card_id}`;
-          if (card.slot_kind === "normal") return name;
-          return `${name} (${card.slot_kind})`;
-        })
-        .slice(0, 6);
-      byTrait.set(row.trait_key, names);
+      byTrait.set(row.trait_key, row.cards.slice(0, 8));
     }
     return byTrait;
-  }, [commonTraits, master]);
+  }, [commonTraits]);
 
   const attackIssue = useMemo<Issue | null>(() => {
     if (!offense || !trend) return null;
@@ -263,9 +282,9 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: traitCardNameMap.get(hit.trait.trait_key)?.slice(0, 4) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
+      exampleCards: traitCardMap.get(hit.trait.trait_key)?.slice(0, 6) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
     };
-  }, [offense, trend, master, traitCardNameMap]);
+  }, [offense, trend, master, traitCardMap]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
@@ -289,7 +308,7 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.threat.stats.delta_vs_baseline,
       battles: hit.threat.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: [master?.getName(hit.threat.card_id) ?? `#${hit.threat.card_id}`],
+      exampleCards: [{ card_id: hit.threat.card_id, slot_kind: hit.threat.slot_kind }],
     };
   }, [defense, master]);
 
@@ -312,13 +331,13 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
-          traitCards: traitCardNameMap.get(t.trait_key)?.slice(0, 4) ?? [],
+          traitCards: traitCardMap.get(t.trait_key)?.slice(0, 6) ?? [],
         };
       })
       .filter((x) => x.expectedLoss > 0)
       .sort((a, b) => b.expectedLoss - a.expectedLoss)
       .slice(0, 4);
-  }, [offense, trend, summary, traitCardNameMap]);
+  }, [offense, trend, summary, traitCardMap]);
 
   const defenseBars = useMemo(() => {
     if (!defense) return [];
@@ -438,7 +457,10 @@ export default function ImprovePage() {
               {priorityIssue ? ` (encounter ${pct(priorityIssue.encounterRate)} / battles ${priorityIssue.battles})` : ""}
             </div>
             {priorityIssue?.exampleCards.length ? (
-              <div className="mt-2 text-xs text-slate-600">Example cards: {priorityIssue.exampleCards.join(" / ")}</div>
+              <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-600">Example cards</summary>
+                <CardThumbGrid cards={priorityIssue.exampleCards} master={master} />
+              </details>
             ) : null}
             <details className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
               <summary className="cursor-pointer text-xs font-semibold text-slate-600">How to read Issue / EL</summary>
@@ -471,7 +493,7 @@ export default function ImprovePage() {
 
             {whyTab === "attack" ? (
               <>
-                <OffenseCompareBars items={offenseCompare} />
+                <OffenseCompareBars items={offenseCompare} master={master} />
               </>
             ) : (
               <>
