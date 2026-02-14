@@ -11,6 +11,7 @@ import {
   getDeckSummary,
   getTrendTraits,
   getTrendWinConditions,
+  getCommonTraits,
 } from "../api/api";
 import type {
   DeckDefenseThreatsResponse,
@@ -18,6 +19,7 @@ import type {
   DeckSummaryResponse,
   TrendTraitsResponse,
   TrendWinConditionsResponse,
+  CommonTraitsResponse,
 } from "../api/types";
 
 type WhyTab = "attack" | "defense";
@@ -49,6 +51,7 @@ type OffenseBarItem = {
   myDeckCount: number;
   expectedLoss: number;
   deltaVsBaseline: number;
+  traitCards: string[];
 };
 
 const ISSUE_FILTER = {
@@ -130,6 +133,9 @@ function OffenseCompareBars({ items }: { items: OffenseBarItem[] }) {
             </div>
           </div>
           <div className="mt-1 text-[11px] text-slate-500">Win-rate delta {signedPct(i.deltaVsBaseline)} / EL {i.expectedLoss.toFixed(1)}</div>
+          {i.traitCards.length ? (
+            <div className="mt-1 text-[11px] text-slate-500">Trait cards: {i.traitCards.join(" / ")}</div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -173,6 +179,7 @@ export default function ImprovePage() {
   const [trend, setTrend] = useState<TrendTraitsResponse | null>(null);
   const [summary, setSummary] = useState<DeckSummaryResponse | null>(null);
   const [winConTrend, setWinConTrend] = useState<TrendWinConditionsResponse | null>(null);
+  const [commonTraits, setCommonTraits] = useState<CommonTraitsResponse | null>(null);
   const [whyTab, setWhyTab] = useState<WhyTab>("attack");
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
 
@@ -185,12 +192,13 @@ export default function ImprovePage() {
       setErr(null);
       setSelectedActionId(null);
       try {
-        const [off, def, tr, sum, wc] = await Promise.all([
+        const [off, def, tr, sum, wc, ct] = await Promise.all([
           getDeckOffenseCounters(deckKey, 2),
           getDeckDefenseThreats(deckKey, 2),
           getTrendTraits(player.player_tag, 2),
           getDeckSummary(deckKey),
           getTrendWinConditions(player.player_tag, 2),
+          getCommonTraits(),
         ]);
         if (cancelled) return;
         setOffense(off);
@@ -198,6 +206,7 @@ export default function ImprovePage() {
         setTrend(tr);
         setSummary(sum);
         setWinConTrend(wc);
+        setCommonTraits(ct);
       } catch (e) {
         if (!cancelled) setErr(toErrorText(e));
       } finally {
@@ -209,6 +218,18 @@ export default function ImprovePage() {
       cancelled = true;
     };
   }, [player, deckKey]);
+
+  const traitCardNameMap = useMemo(() => {
+    if (!commonTraits) return new Map<string, string[]>();
+    const byTrait = new Map<string, string[]>();
+    for (const row of commonTraits.traits) {
+      const names = row.card_ids
+        .map((id) => master?.getName(id) ?? `#${id}`)
+        .slice(0, 6);
+      byTrait.set(row.trait_key, names);
+    }
+    return byTrait;
+  }, [commonTraits, master]);
 
   const attackIssue = useMemo<Issue | null>(() => {
     if (!offense || !trend) return null;
@@ -238,9 +259,9 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: cardExamplesForTrait(hit.trait.trait_key, offense, master),
+      exampleCards: traitCardNameMap.get(hit.trait.trait_key)?.slice(0, 4) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
     };
-  }, [offense, trend, master]);
+  }, [offense, trend, master, traitCardNameMap]);
 
   const defenseIssue = useMemo<Issue | null>(() => {
     if (!defense) return null;
@@ -287,12 +308,13 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
+          traitCards: traitCardNameMap.get(t.trait_key)?.slice(0, 4) ?? [],
         };
       })
       .filter((x) => x.expectedLoss > 0)
       .sort((a, b) => b.expectedLoss - a.expectedLoss)
       .slice(0, 4);
-  }, [offense, trend, summary]);
+  }, [offense, trend, summary, traitCardNameMap]);
 
   const defenseBars = useMemo(() => {
     if (!defense) return [];

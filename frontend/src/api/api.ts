@@ -7,6 +7,7 @@ import type {
   DeckDefenseThreatsResponse,
   TrendTraitsResponse,
   TrendWinConditionsResponse,
+  CommonTraitsResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -132,4 +133,9 @@ export function getTrendWinConditions(playerTag: string, seasons = 2): Promise<T
   return request<TrendWinConditionsResponse>(`/api/trend/${encodeURIComponent(playerTag)}/win-conditions`, {
     params: { seasons },
   });
+}
+
+
+export function getCommonTraits(): Promise<CommonTraitsResponse> {
+  return request<CommonTraitsResponse>("/api/common/traits");
 }

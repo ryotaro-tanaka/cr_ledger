@@ -130,3 +130,11 @@ export type TrendWinConditionsResponse = ApiBaseOk & {
     fractional_points: number;
   }>;
 };
+
+
+export type CommonTraitsResponse = ApiBaseOk & {
+  traits: Array<{
+    trait_key: string;
+    card_ids: number[];
+  }>;
+};
