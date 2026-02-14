@@ -54,3 +54,50 @@ export async function getMyDeckCards(env, myDeckKey) {
 
   return { cards: r.results || [] };
 }
+
+
+export async function listCardClasses(env) {
+  const r = await env.DB.prepare(
+    `
+    SELECT
+      class_key,
+      card_id
+    FROM card_classes
+    ORDER BY class_key ASC, card_id ASC;
+    `
+  ).all();
+
+  return { classes: r.results || [] };
+}
+
+export async function listCardTraits(env) {
+  const r = await env.DB.prepare(
+    `
+    SELECT
+      card_id,
+      is_air,
+      can_damage_air,
+      primary_target_buildings,
+      is_aoe,
+      is_swarm_like
+    FROM card_traits;
+    `
+  ).all();
+
+  return { traits: r.results || [] };
+}
+
+export async function listCardTraitKvs(env) {
+  const r = await env.DB.prepare(
+    `
+    SELECT
+      card_id,
+      slot_kind,
+      trait_key,
+      trait_value
+    FROM card_trait_kv;
+    `
+  ).all();
+
+  return { trait_kvs: r.results || [] };
+}

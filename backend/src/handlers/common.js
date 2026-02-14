@@ -3,7 +3,70 @@ import { normalizeTagForApi } from "../domain.js";
 import { syncCore } from "../sync.js";
 import { crCards } from "../cr_api.js";
 import { statsMyDecksLast } from "../db/analytics/legacy.js";
-import { listPlayers, updateDeckName, getMyDeckCards } from "../db/read.js";
+import {
+  listPlayers,
+  updateDeckName,
+  getMyDeckCards,
+  listCardClasses,
+  listCardTraits,
+  listCardTraitKvs,
+} from "../db/read.js";
+
+const TRAIT_FIELDS = [
+  "is_air",
+  "can_damage_air",
+  "primary_target_buildings",
+  "is_aoe",
+  "is_swarm_like",
+];
+
+const SLOT_KINDS = ["normal", "evolution", "hero", "support"];
+
+function toTraitBool(value) {
+  if (value === null || value === undefined) return true;
+  return Number(value) !== 0;
+}
+
+function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
+  const resolved = new Map();
+
+  for (const traitKey of TRAIT_FIELDS) {
+    if (Number(cardTraits?.[traitKey]) === 1) resolved.set(traitKey, true);
+  }
+
+  const kvChosen = new Map();
+  for (const row of cardTraitKvs) {
+    if (row.slot_kind !== "all" && row.slot_kind !== slotKind) continue;
+
+    const prev = kvChosen.get(row.trait_key);
+    if (!prev || (prev.slot_kind === "all" && row.slot_kind !== "all")) {
+      kvChosen.set(row.trait_key, row);
+    }
+  }
+
+  for (const [traitKey, row] of kvChosen.entries()) {
+    if (TRAIT_FIELDS.includes(traitKey)) continue;
+
+    if (toTraitBool(row.trait_value)) {
+      resolved.set(traitKey, true);
+    } else {
+      resolved.delete(traitKey);
+    }
+  }
+
+  for (const row of cardTraitKvs) {
+    if (row.slot_kind !== slotKind) continue;
+    if (!TRAIT_FIELDS.includes(row.trait_key)) continue;
+
+    if (toTraitBool(row.trait_value)) {
+      resolved.set(row.trait_key, true);
+    } else {
+      resolved.delete(row.trait_key);
+    }
+  }
+
+  return resolved;
+}
 
 export async function handleCommonPlayers(env, url) {
   const last = clampInt(url.searchParams.get("last"), 1, 5000, 200);
@@ -56,15 +119,12 @@ export async function handleCommonUpdateDeckName(req, env) {
 }
 
 function normalizeDeckNameAllowClear(v) {
-  // undefined/null はエラーにしたいならここで分ける
   if (v === undefined) return { ok: false, error: "deck_name required" };
 
   const s = (v ?? "").toString().trim();
 
-  // 空なら「クリア」扱いで NULL
   if (s === "") return { ok: true, value: null };
 
-  // 長さ制限（好みで）
   if (s.length > 40) return { ok: false, error: "deck_name too long (max 40)" };
 
   return { ok: true, value: s };
@@ -116,4 +176,67 @@ export async function handleCommonCards(req, env) {
   }
 
   return res;
+}
+
+export async function handleCommonClasses(env) {
+  const { classes } = await listCardClasses(env);
+
+  const grouped = new Map();
+  for (const row of classes) {
+    if (!grouped.has(row.class_key)) grouped.set(row.class_key, []);
+    grouped.get(row.class_key).push(Number(row.card_id));
+  }
+
+  const payload = Array.from(grouped.entries())
+    .map(([class_key, card_ids]) => ({
+      class_key,
+      card_ids: [...new Set(card_ids)].sort((a, b) => a - b),
+    }))
+    .sort((a, b) => String(a.class_key).localeCompare(String(b.class_key)));
+
+  return json({ ok: true, classes: payload }, 200);
+}
+
+export async function handleCommonTraits(env) {
+  const [{ traits }, { trait_kvs }] = await Promise.all([
+    listCardTraits(env),
+    listCardTraitKvs(env),
+  ]);
+
+  const cardTraitsById = new Map(traits.map((row) => [row.card_id, row]));
+  const cardTraitKvsById = new Map();
+
+  for (const row of trait_kvs) {
+    if (!cardTraitKvsById.has(row.card_id)) cardTraitKvsById.set(row.card_id, []);
+    cardTraitKvsById.get(row.card_id).push(row);
+  }
+
+  const allCardIds = new Set([...cardTraitsById.keys(), ...cardTraitKvsById.keys()]);
+
+  const traitToCardIds = new Map();
+  for (const cardId of allCardIds) {
+    const cardTrait = cardTraitsById.get(cardId);
+    const kvs = cardTraitKvsById.get(cardId) || [];
+
+    const resolvedTraits = new Set();
+    for (const slotKind of SLOT_KINDS) {
+      for (const traitKey of resolveCardTraits(cardTrait, kvs, slotKind).keys()) {
+        resolvedTraits.add(traitKey);
+      }
+    }
+
+    for (const traitKey of resolvedTraits) {
+      if (!traitToCardIds.has(traitKey)) traitToCardIds.set(traitKey, []);
+      traitToCardIds.get(traitKey).push(Number(cardId));
+    }
+  }
+
+  const payload = Array.from(traitToCardIds.entries())
+    .map(([trait_key, card_ids]) => ({
+      trait_key,
+      card_ids: [...new Set(card_ids)].sort((a, b) => a - b),
+    }))
+    .sort((a, b) => String(a.trait_key).localeCompare(String(b.trait_key)));
+
+  return json({ ok: true, traits: payload }, 200);
 }
