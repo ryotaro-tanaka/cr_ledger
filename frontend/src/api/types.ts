@@ -135,10 +135,9 @@ export type TrendWinConditionsResponse = ApiBaseOk & {
 export type CommonTraitsResponse = ApiBaseOk & {
   traits: Array<{
     trait_key: string;
-    cards?: Array<{
+    cards: Array<{
       card_id: number;
       slot_kind: SlotKind;
     }>;
-    card_ids?: number[];
   }>;
 };

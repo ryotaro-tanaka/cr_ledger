@@ -249,17 +249,8 @@ export default function ImprovePage() {
     if (!commonTraits) return new Map<string, CardThumb[]>();
     const byTrait = new Map<string, CardThumb[]>();
     for (const row of commonTraits.traits) {
-      const cardsFromNewShape = Array.isArray(row.cards)
-        ? row.cards.filter((c): c is CardThumb => Number.isFinite(c?.card_id) && typeof c?.slot_kind === "string")
-        : [];
-      const cardsFromLegacyShape = Array.isArray(row.card_ids)
-        ? row.card_ids
-            .filter((id) => Number.isFinite(id))
-            .map((card_id) => ({ card_id, slot_kind: "normal" as const }))
-        : [];
-
-      const normalized = (cardsFromNewShape.length ? cardsFromNewShape : cardsFromLegacyShape)
-        .slice(0, 8)
+      const normalized = row.cards
+        .filter((c): c is CardThumb => Number.isFinite(c?.card_id) && typeof c?.slot_kind === "string")
         .filter((c, idx, arr) => arr.findIndex((x) => x.card_id === c.card_id && x.slot_kind === c.slot_kind) === idx);
 
       byTrait.set(row.trait_key, normalized);
@@ -295,7 +286,7 @@ export default function ImprovePage() {
       deltaVsBaseline: hit.trait.stats.delta_vs_baseline,
       battles: hit.trait.stats.battles_with_element,
       expectedLoss: hit.loss,
-      exampleCards: traitCardMap.get(hit.trait.trait_key)?.slice(0, 6) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
+      exampleCards: traitCardMap.get(hit.trait.trait_key) ?? cardExamplesForTrait(hit.trait.trait_key, offense, master),
     };
   }, [offense, trend, master, traitCardMap]);
 
@@ -344,7 +335,7 @@ export default function ImprovePage() {
           myDeckCount: traitCount(summary, t.trait_key.replace(/^is_/, "")),
           expectedLoss: expectedLoss(t.stats.battles_with_element, baseline, t.stats.win_rate_given),
           deltaVsBaseline: t.stats.delta_vs_baseline,
-          traitCards: traitCardMap.get(t.trait_key)?.slice(0, 6) ?? [],
+          traitCards: traitCardMap.get(t.trait_key) ?? [],
         };
       })
       .filter((x) => x.expectedLoss > 0)
