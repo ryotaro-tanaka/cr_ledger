@@ -123,8 +123,16 @@ export default function Overview() {
     const speed = minimumElixirCycle == null ? "Unknown" : minimumElixirCycle <= 9 ? "Fast" : minimumElixirCycle <= 12 ? "Mid" : "Slow";
     const aoeRes = aoeCount >= 4 ? "High" : aoeCount >= 2 ? "Medium" : "Low";
     const airRes = airCount >= 3 ? "High" : airCount >= 1 ? "Medium" : "Low";
+    const antiSwarmCount = traitCount("aoe") + traitCount("splash");
+    const swarmRes = antiSwarmCount >= 3 ? "High" : antiSwarmCount >= 2 ? "Medium" : "Low";
 
-    return [`Deck style: ${style}`, `AoE resistance: ${aoeRes}`, `Air resistance: ${airRes}`, `Cycle speed: ${speed}`];
+    return [
+      `Deck style: ${style}`,
+      `AoE resistance: ${aoeRes}`,
+      `Air resistance: ${airRes}`,
+      `Swarm resistance: ${swarmRes}`,
+      `Cycle speed: ${speed}`,
+    ];
   }, [data, minimumElixirCycle]);
 
   const strengths = useMemo(() => {

@@ -47,6 +47,7 @@
 
 - AoE耐性: `aoe` 系 trait 数で 高め/普通/低め
 - Air耐性: `anti_air` class + `air` trait 数で 高め/普通/低め
+- Swarm耐性: `aoe` + `splash` 系 trait 数で 高め/普通/低め
 - サイクル速度:
   - `minimumElixirCycle <= 9` -> 高速
   - `<= 12` -> 中速
