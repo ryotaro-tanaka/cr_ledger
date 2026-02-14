@@ -203,15 +203,15 @@ Response schema (200):
 Notes:
 - 現行のカードマスタ取得エンドポイント。
 
-## GET /api/trend/win-conditions
+## GET /api/trend/{player_tag}/win-conditions
 
 相手デッキの win_condition 分布を fractional ポイントで集計します。
 
 Request:
 - Auth: Required
-- Path Params: なし
+- Path Params:
+  - `player_tag`: string
 - Query Params:
-  - `player_tag`: string (required)
   - `last`: number (optional, default 200, max 5000)
 - JSON Body: なし
 
@@ -220,7 +220,7 @@ Responses:
 - 500: サーバ内部エラー
 
 Response example (200):
-- `docs/api/examples.md` の「GET /api/trend/win-conditions」を参照。
+- `docs/api/examples.md` の「GET /api/trend/{player_tag}/win-conditions」を参照。
 
 Response schema (200):
 - `ok`: boolean

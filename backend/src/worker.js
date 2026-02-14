@@ -42,9 +42,14 @@ export default {
         }
 
         const trendPrefix = "/api/trend/";
-        const trendSuffix = "/traits";
-        if (path.startsWith(trendPrefix) && path.endsWith(trendSuffix)) {
+        const traitsSuffix = "/traits";
+        if (path.startsWith(trendPrefix) && path.endsWith(traitsSuffix)) {
           return await handleTrendTraits(env, url, path);
+        }
+
+        const winConditionsSuffix = "/win-conditions";
+        if (path.startsWith(trendPrefix) && path.endsWith(winConditionsSuffix)) {
+          return await handleTrendWinConditions(env, url, path);
         }
       }
 
@@ -60,7 +65,6 @@ export default {
 
         "GET /api/common/cards": async (req, env) => await handleCommonCards(req, env),
 
-        "GET /api/trend/win-conditions": async (_req, env, url) => await handleTrendWinConditions(env, url),
       });
     });
   },

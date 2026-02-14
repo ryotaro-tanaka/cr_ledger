@@ -95,7 +95,7 @@ Response example (200):
 }
 ```
 
-## GET /api/trend/win-conditions
+## GET /api/trend/{player_tag}/win-conditions
 
 Response example (200):
 ```json
