@@ -75,6 +75,7 @@ export async function listCardTraits(env) {
     `
     SELECT
       card_id,
+      card_type,
       is_air,
       can_damage_air,
       primary_target_buildings,

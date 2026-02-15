@@ -21,7 +21,52 @@ const TRAIT_FIELDS = [
 ];
 
 const SLOT_KINDS = ["normal", "evolution", "hero", "support"];
+const NON_SUPPORT_SLOT_KINDS = ["normal", "evolution", "hero"];
+const SUPPORT_SLOT_KINDS = ["support"];
 const SLOT_KIND_ORDER = new Map(SLOT_KINDS.map((kind, idx) => [kind, idx]));
+
+
+function slotKindsForCardType(cardType) {
+  if (cardType === "support") return SUPPORT_SLOT_KINDS;
+  if (cardType === "unit" || cardType === "spell" || cardType === "building") return NON_SUPPORT_SLOT_KINDS;
+  return SLOT_KINDS;
+}
+
+
+function slotKindsFromCardCatalog(cardData) {
+  const byCardId = new Map();
+
+  for (const item of Array.isArray(cardData?.items) ? cardData.items : []) {
+    const cardId = Number(item?.id);
+    if (!Number.isInteger(cardId)) continue;
+
+    const iconUrls = item?.iconUrls || {};
+    const slotKinds = ["normal"];
+    if (iconUrls.evolutionMedium) slotKinds.push("evolution");
+    if (iconUrls.heroMedium) slotKinds.push("hero");
+
+    byCardId.set(cardId, slotKinds);
+  }
+
+  for (const item of Array.isArray(cardData?.supportItems) ? cardData.supportItems : []) {
+    const cardId = Number(item?.id);
+    if (!Number.isInteger(cardId)) continue;
+    byCardId.set(cardId, SUPPORT_SLOT_KINDS);
+  }
+
+  return byCardId;
+}
+
+async function loadCardCatalogSlotKinds(env) {
+  if (!env?.CR_API_TOKEN) return new Map();
+
+  try {
+    const cardData = await crCards(env);
+    return slotKindsFromCardCatalog(cardData);
+  } catch {
+    return new Map();
+  }
+}
 
 function toTraitBool(value) {
   if (value === null || value === undefined) return true;
@@ -201,9 +246,10 @@ export async function handleCommonClasses(env) {
 }
 
 export async function handleCommonTraits(env) {
-  const [{ traits }, { trait_kvs }] = await Promise.all([
+  const [{ traits }, { trait_kvs }, slotKindsByCardId] = await Promise.all([
     listCardTraits(env),
     listCardTraitKvs(env),
+    loadCardCatalogSlotKinds(env),
   ]);
 
   const cardTraitsById = new Map(traits.map((row) => [row.card_id, row]));
@@ -221,7 +267,8 @@ export async function handleCommonTraits(env) {
     const cardTrait = cardTraitsById.get(cardId);
     const kvs = cardTraitKvsById.get(cardId) || [];
 
-    for (const slotKind of SLOT_KINDS) {
+    const slotKinds = slotKindsByCardId.get(Number(cardId)) || slotKindsForCardType(cardTrait?.card_type);
+    for (const slotKind of slotKinds) {
       for (const traitKey of resolveCardTraits(cardTrait, kvs, slotKind).keys()) {
         if (!traitToCards.has(traitKey)) traitToCards.set(traitKey, []);
         traitToCards.get(traitKey).push({ card_id: Number(cardId), slot_kind: slotKind });

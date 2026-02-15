@@ -65,6 +65,11 @@ Resolve 手順:
 2. KV traits を `card_trait_kv` から採用（優先度: `slot_kind` 一致 > `all`）。
 3. Base traits 名と同じ `trait_key` が `slot_kind` 行にある場合は上書き（true なら追加、false なら除外）。
 
+`slot_kind='all'` の解釈（重要）:
+- `all` は常に 4 種 (`normal`, `evolution`, `hero`, `support`) を意味するわけではない。
+- `card_type='support'` のカードでは、`all` は `support` のみを指す（=`slot_kind='support'` と同義）。
+- `card_type!='support'` のカードでは、`all` は `normal` / `evolution` / `hero` を指し、`support` は含めない。
+
 例:
 - `card_traits.is_aoe = 0` かつ上書きなし → `is_aoe` は含まれない。
 - `card_traits.is_aoe = 0` だが `('evolution','is_aoe',1)` あり → `is_aoe` を含める。
