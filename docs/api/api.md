@@ -257,6 +257,7 @@ Response schema (200):
 
 Notes:
 - trait 解決は `docs/db/notes.md` の「Traits Resolve（API参照）」に従う。
+- `slot_kind='all'` の扱いは一律ではなく、`card_type='support'` は `support` のみ、それ以外は `normal|evolution|hero` を指す。
 - 同一 `card_id` でも `slot_kind` によって trait が異なる可能性があるため、`cards[]` は `(card_id, slot_kind)` の組で返す。
 - 主な参照テーブルは `card_traits` / `card_trait_kv` / `trait_keys`。
 
