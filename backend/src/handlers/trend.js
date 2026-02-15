@@ -10,6 +10,14 @@ const BASE_TRAIT_KEYS = [
   "is_swarm_like",
 ];
 
+function isAllSlotKindApplicable(cardType, slotKind) {
+  if (cardType === "support") return slotKind === "support";
+  if (cardType === "unit" || cardType === "spell" || cardType === "building") {
+    return slotKind === "normal" || slotKind === "evolution" || slotKind === "hero";
+  }
+  return true;
+}
+
 function toTraitBool(value) {
   if (value === null || value === undefined) return true;
   return Number(value) !== 0;
@@ -24,6 +32,7 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
 
   const kvChosen = new Map();
   for (const row of cardTraitKvs) {
+    if (row.slot_kind === "all" && !isAllSlotKindApplicable(cardTraits?.card_type, slotKind)) continue;
     if (row.slot_kind !== "all" && row.slot_kind !== slotKind) continue;
 
     const prev = kvChosen.get(row.trait_key);
@@ -132,6 +141,7 @@ export async function handleTrendTraits(env, url, path) {
     `
     SELECT
       card_id,
+      card_type,
       is_air,
       can_damage_air,
       primary_target_buildings,

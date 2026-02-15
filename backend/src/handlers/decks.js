@@ -24,6 +24,14 @@ const TRAIT_FIELDS = [
   "is_swarm_like",
 ];
 
+function isAllSlotKindApplicable(cardType, slotKind) {
+  if (cardType === "support") return slotKind === "support";
+  if (cardType === "unit" || cardType === "spell" || cardType === "building") {
+    return slotKind === "normal" || slotKind === "evolution" || slotKind === "hero";
+  }
+  return true;
+}
+
 function toTraitBool(value) {
   if (value === null || value === undefined) return true;
   return Number(value) !== 0;
@@ -38,6 +46,7 @@ function resolveCardTraits(cardTraits, cardTraitKvs, slotKind) {
 
   const kvChosen = new Map();
   for (const row of cardTraitKvs) {
+    if (row.slot_kind === "all" && !isAllSlotKindApplicable(cardTraits?.card_type, slotKind)) continue;
     if (row.slot_kind !== "all" && row.slot_kind !== slotKind) continue;
 
     const prev = kvChosen.get(row.trait_key);
@@ -107,6 +116,7 @@ function buildTraitKeys(cardTraits, traitKvs, slotKind) {
   }
 
   for (const row of traitKvs) {
+    if (row.slot_kind === "all" && !isAllSlotKindApplicable(cardTraits?.card_type, slotKind)) continue;
     if (row.slot_kind !== "all" && row.slot_kind !== slotKind) continue;
     const existing = traitMap.get(row.trait_key);
     if (!existing || (existing === "all" && row.slot_kind !== "all")) {
