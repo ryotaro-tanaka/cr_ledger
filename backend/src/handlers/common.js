@@ -25,6 +25,27 @@ const NON_SUPPORT_SLOT_KINDS = ["normal", "evolution", "hero"];
 const SUPPORT_SLOT_KINDS = ["support"];
 const SLOT_KIND_ORDER = new Map(SLOT_KINDS.map((kind, idx) => [kind, idx]));
 
+function slotKindsFromCardMaster(data) {
+  const out = new Map();
+
+  for (const card of data?.items || []) {
+    const slotKinds = [];
+    const iconUrls = card?.iconUrls || {};
+
+    if (iconUrls.medium) slotKinds.push("normal");
+    if (iconUrls.evolutionMedium) slotKinds.push("evolution");
+    if (iconUrls.heroMedium) slotKinds.push("hero");
+
+    if (slotKinds.length > 0) out.set(Number(card.id), slotKinds);
+  }
+
+  for (const card of data?.supportItems || []) {
+    if (card?.iconUrls?.medium) out.set(Number(card.id), ["support"]);
+  }
+
+  return out;
+}
+
 
 function slotKindsForCardType(cardType) {
   if (cardType === "support") return SUPPORT_SLOT_KINDS;
@@ -215,6 +236,13 @@ export async function handleCommonTraits(env) {
     listCardTraitKvs(env),
   ]);
 
+  let slotKindsByCardId = new Map();
+  try {
+    slotKindsByCardId = slotKindsFromCardMaster(await crCards(env));
+  } catch {
+    slotKindsByCardId = new Map();
+  }
+
   const cardTraitsById = new Map(traits.map((row) => [row.card_id, row]));
   const cardTraitKvsById = new Map();
 
@@ -230,7 +258,8 @@ export async function handleCommonTraits(env) {
     const cardTrait = cardTraitsById.get(cardId);
     const kvs = cardTraitKvsById.get(cardId) || [];
 
-    for (const slotKind of slotKindsForCardType(cardTrait?.card_type)) {
+    const availableSlotKinds = slotKindsByCardId.get(Number(cardId)) || slotKindsForCardType(cardTrait?.card_type);
+    for (const slotKind of availableSlotKinds) {
       for (const traitKey of resolveCardTraits(cardTrait, kvs, slotKind).keys()) {
         if (!traitToCards.has(traitKey)) traitToCards.set(traitKey, []);
         traitToCards.get(traitKey).push({ card_id: Number(cardId), slot_kind: slotKind });

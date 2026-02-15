@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleCommonClasses, handleCommonTraits } from '../src/handlers/common';
 
 function makeEnvWithResults(resultsQueue: any[]) {
@@ -16,6 +16,10 @@ function makeEnvWithResults(resultsQueue: any[]) {
 }
 
 describe('Common handlers', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('returns classes grouped by class_key', async () => {
     const env = makeEnvWithResults([
       [
@@ -37,6 +41,11 @@ describe('Common handlers', () => {
   });
 
   it('resolves slot_kind=all by card_type for common traits response', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({ items: [], supportItems: [] }),
+    })));
+
     const env = makeEnvWithResults([
       [
         {
@@ -99,6 +108,54 @@ describe('Common handlers', () => {
             { card_id: 10000, slot_kind: 'evolution' },
             { card_id: 10000, slot_kind: 'hero' },
             { card_id: 10002, slot_kind: 'support' },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('limits slot kinds using RoyaleAPI cards iconUrls', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({
+        items: [
+          {
+            id: 26000030,
+            iconUrls: {
+              medium: 'https://example.com/ice-spirit.png',
+              evolutionMedium: 'https://example.com/ice-spirit-evo.png',
+            },
+          },
+        ],
+        supportItems: [],
+      }),
+    })));
+
+    const env = makeEnvWithResults([
+      [
+        {
+          card_id: 26000030,
+          card_type: 'unit',
+          is_air: 0,
+          can_damage_air: 0,
+          primary_target_buildings: 0,
+          is_aoe: 0,
+          is_swarm_like: 0,
+        },
+      ],
+      [{ card_id: 26000030, slot_kind: 'all', trait_key: 'immobilize', trait_value: 1 }],
+    ]);
+
+    const res = await handleCommonTraits(env);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      ok: true,
+      traits: [
+        {
+          trait_key: 'immobilize',
+          cards: [
+            { card_id: 26000030, slot_kind: 'normal' },
+            { card_id: 26000030, slot_kind: 'evolution' },
           ],
         },
       ],
