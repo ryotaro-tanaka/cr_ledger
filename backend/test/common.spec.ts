@@ -36,16 +36,42 @@ describe('Common handlers', () => {
     });
   });
 
-  it('returns traits grouped by trait_key using traits resolve rules', async () => {
+  it('resolves slot_kind=all by card_type for common traits response', async () => {
     const env = makeEnvWithResults([
       [
-        { card_id: 10000, is_air: 0, can_damage_air: 0, primary_target_buildings: 0, is_aoe: 0, is_swarm_like: 0 },
-        { card_id: 10001, is_air: 1, can_damage_air: 0, primary_target_buildings: 0, is_aoe: 0, is_swarm_like: 0 },
+        {
+          card_id: 10000,
+          card_type: 'unit',
+          is_air: 0,
+          can_damage_air: 0,
+          primary_target_buildings: 0,
+          is_aoe: 0,
+          is_swarm_like: 0,
+        },
+        {
+          card_id: 10001,
+          card_type: 'unit',
+          is_air: 1,
+          can_damage_air: 0,
+          primary_target_buildings: 0,
+          is_aoe: 0,
+          is_swarm_like: 0,
+        },
+        {
+          card_id: 10002,
+          card_type: 'support',
+          is_air: 0,
+          can_damage_air: 0,
+          primary_target_buildings: 0,
+          is_aoe: 0,
+          is_swarm_like: 0,
+        },
       ],
       [
         { card_id: 10000, slot_kind: 'all', trait_key: 'stun', trait_value: 1 },
         { card_id: 10000, slot_kind: 'evolution', trait_key: 'is_aoe', trait_value: 1 },
         { card_id: 10001, slot_kind: 'all', trait_key: 'stun', trait_value: 0 },
+        { card_id: 10002, slot_kind: 'all', trait_key: 'stun', trait_value: 1 },
       ],
     ]);
 
@@ -60,7 +86,6 @@ describe('Common handlers', () => {
             { card_id: 10001, slot_kind: 'normal' },
             { card_id: 10001, slot_kind: 'evolution' },
             { card_id: 10001, slot_kind: 'hero' },
-            { card_id: 10001, slot_kind: 'support' },
           ],
         },
         {
@@ -73,7 +98,7 @@ describe('Common handlers', () => {
             { card_id: 10000, slot_kind: 'normal' },
             { card_id: 10000, slot_kind: 'evolution' },
             { card_id: 10000, slot_kind: 'hero' },
-            { card_id: 10000, slot_kind: 'support' },
+            { card_id: 10002, slot_kind: 'support' },
           ],
         },
       ],

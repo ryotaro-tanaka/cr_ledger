@@ -21,7 +21,16 @@ const TRAIT_FIELDS = [
 ];
 
 const SLOT_KINDS = ["normal", "evolution", "hero", "support"];
+const NON_SUPPORT_SLOT_KINDS = ["normal", "evolution", "hero"];
+const SUPPORT_SLOT_KINDS = ["support"];
 const SLOT_KIND_ORDER = new Map(SLOT_KINDS.map((kind, idx) => [kind, idx]));
+
+
+function slotKindsForCardType(cardType) {
+  if (cardType === "support") return SUPPORT_SLOT_KINDS;
+  if (cardType === "unit" || cardType === "spell" || cardType === "building") return NON_SUPPORT_SLOT_KINDS;
+  return SLOT_KINDS;
+}
 
 function toTraitBool(value) {
   if (value === null || value === undefined) return true;
@@ -221,7 +230,7 @@ export async function handleCommonTraits(env) {
     const cardTrait = cardTraitsById.get(cardId);
     const kvs = cardTraitKvsById.get(cardId) || [];
 
-    for (const slotKind of SLOT_KINDS) {
+    for (const slotKind of slotKindsForCardType(cardTrait?.card_type)) {
       for (const traitKey of resolveCardTraits(cardTrait, kvs, slotKind).keys()) {
         if (!traitToCards.has(traitKey)) traitToCards.set(traitKey, []);
         traitToCards.get(traitKey).push({ card_id: Number(cardId), slot_kind: slotKind });
